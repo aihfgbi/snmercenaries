@@ -455,7 +455,7 @@ function CMD.online(uid, node, addr, ip, nickname)
 		agaddr = agaddr,
 		datnode = _nodename,
 		dataddr = skynet.self(),
-		nickname = _userdata.nickname,
+		nickname = _userdata.nickName,
 		gold = _userdata.gold,
 		headimg = _userdata.headimg,
 		money = 0,
@@ -1316,12 +1316,28 @@ function api.load_userdata(uid)
 	end
 	for i = 1, 3 do
 		-- 尝试三次
-		local ok, data = pcall(skynet.call, _redis, "lua", "execute", "get", "userdata->" .. tostring(uid))
+		local ok, data = pcall(skynet.call, _redis, "lua", "execute", "hget", "USER-INFO" , tostring(uid))
 		if ok then
 			if data then
-				return decode_userdata(data)
+				local info = json.decode(data)
+				-- 获取用户金币和银行信息
+				ok, data = pcall(skynet.call, _redis, "lua", "execute", "hget", "USER-ACCOUNT_INFO", uid .. "#1001")
+				if ok then
+					-- 转换用户金币数据
+					if data then
+						-- body
+						local goldinfo = json.decode(data)
+						info.gold = math.floor( goldinfo.aNum )
+						info.bank = math.floor( goldinfo.aBank )
+						info.bankpwd = goldinfo.aPassword
+					else
+						info.gold = 0
+						info.bank = 0
+						info.bankpwd = "0"
+					end
+				end
+				return info
 			end
-			break
 		else
 			LOG_DEBUG("load userdata error:" .. tostring(data))
 		end
