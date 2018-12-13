@@ -1,0 +1,6 @@
+{
+    "lua.targetVersion": "5.3",
+    "files.associations": {
+        "stdio.h": "c"
+    }
+}

@@ -1,0 +1,411 @@
+// 代码风格
+//消息名：使用骆驼风格的大小写命名，即单词首字母大写
+//字段名：全部小写
+//枚举名：使用骆驼风格的大小写命名
+//枚举值：全部大写，使用下划线分隔
+
+package user;
+
+//user包中的协议如果需要区别接收的客户端，需要在协议中带clientid（小写）字段。
+//如果协议中有clientid字段，则客户端接收的时候会自动路由,
+//如果没有clientid（optional也属于有，而不属于没有）字段，则会广播给所有客户端
+
+message UserInfoRequest {
+	required int32 uid = 1;
+	optional int32 type = 2;   //请求的数据类型 由UserInfoResonpse的内容进行顺序编号
+}
+
+message UserInfoResonpse {
+	required int32 uid = 1;
+	required int32 type = 2;
+	optional string nickname = 3;
+	
+	optional sint64 gold = 4;
+	optional sint64 bank = 5;
+	optional int32 exp = 6;
+	optional int32 vipexp = 7;
+	optional int32 sex = 8;
+	optional string headimg = 9;
+	optional string usermsg = 10;
+	optional int32 money = 11;
+	optional int32 hongbao = 12;
+	optional int32 wincount = 13;
+	optional int32 charged = 14;
+}
+
+message CheckReconnectReq{
+	
+}
+
+message CheckReconnectRep{
+	required int32 gameid = 1;
+}
+
+message ReconnectTableReq{
+	required int32 session = 1;
+	required int32 result = 2;//0表示加入，其他值表示放弃加入
+	required int32 index = 3;//0表示恢复现场的方式断线重连，大于0表示闪断方式断线重连
+	optional int32 clientid = 4;  //断线重连也需要更新clientid
+}
+
+message ReconnectTableRep{
+	required int32 result = 1;//0表示加入成功，其他值表示失败
+	required int32 session = 2;
+	optional int32 clientid = 3;
+}
+
+//快速加入
+message QuickJoinRequest {
+	optional int32 code = 1;
+	optional int32 gameid = 2;
+	optional int32 pay = 3;
+	optional int32 score = 4;
+	optional int32 times = 5;
+	repeated int32 params = 6;
+}
+
+message QuickJoinResonpse {
+	required int32 result = 1; //0成功，1失败
+	required int32 gameid = 2; //进入的游戏ID(如果是比赛，则表示比赛的id)
+	required int32 ismatch = 3; //是否是比赛
+}
+
+message GameListReq {
+}
+
+message GameListRep {
+	message game {
+		required int32 time = 1;
+		required int32 endtime = 2;
+		required int32 paytype = 3;
+		required int32 times = 4;
+		required int32 score = 5;
+		required int32 gameid = 6;
+		required int32 code = 7;
+		repeated int32 params = 8; //开房数据里面的额外参数
+	}
+
+	repeated game list = 1;
+}
+
+message HistroyListReq {
+	//请求战绩
+}
+
+message HistroyListRep {
+	//战绩返回
+	message info {
+		required int32 index = 1; //用于查询详细战绩内容的索引
+		required int32 gameid = 2;
+		required int32 code = 3;
+		required int32 time = 4; //结束时间
+		required int32 score = 5; //底分
+		required string owner = 6; //房主
+		required int32 times = 7; //总局数
+		repeated int32 scores = 8; //玩家总的输赢情况
+		repeated string players = 9; //玩家昵称列表
+	}
+	repeated info list = 1;
+}
+
+message SingleHistroyReq {
+	//根据index请求详细的战绩内容
+	required int32 index = 1;
+}
+
+
+message HistroyInfo {
+	message histroy {
+		required int32 hash = 1; //用来请求录像文件用的hash值
+		repeated int32 scores = 2;
+		repeated string players = 3;
+	}
+	repeated histroy list = 1; 
+}
+
+message DissolveTableReq {
+	required int32 code = 1;
+}
+
+message DissolveTableRep {
+	required int32 result = 1; //如果是0表示成功，其他值表示失败
+}
+
+message ModifyUserInfoReq {
+	required int32 type = 1; //1表示个性签名,2表示昵称
+	required string value = 2;
+}
+
+message ModifyUserInfoRep {
+	required int32 result = 1; //0表示成功，其他值表示失败
+}
+
+message RangeListRep {
+	required int32 type = 1; //1表示红包榜
+}
+
+message RangeListReq {
+	message Info {
+		required int32 uid = 1;
+		required string nickname = 2;
+		required sint64 value = 3;
+	}
+	required int32 index = 1; //数组的第一位的名次
+	required int32 count = 2; //数组长度
+	required int32 type = 3; //1表示红包榜
+	repeated Info list = 4; //详细排名数组
+}
+
+message QuickJoinGoldGameReq {
+	required int32 gameid = 1;
+}
+
+//获取签到信息
+message RequestSignInData{
+}
+
+message ReponseSignInData{
+	required int32 isSigned = 1;			//今天是否已签到 0没有 1已经签过
+	required int32 signedDays = 2; 			//已经连续签到几天
+}
+
+//签到
+message UserSignIn{
+}
+
+message ChargeNtf {
+	required int32 rmb = 1; //花费多少人名币(分为单位)
+	required int32 count = 2; //获得多少钻石
+}
+
+message BuyReq {
+	required int32 id = 1; //shop表里面的id
+	required int32 count = 2; //购买数量/次数
+}
+
+message BuyRep {
+	required int32 id = 1; //shop表里面的id
+	required int32 count = 2; //购买数量/次数
+	required int32 result = 3; //购买结果，0表示成功，其他值表示失败
+}
+
+message BuyHongbaoReq {
+	required int32 id = 1;
+}
+
+message BuyHongbaoRep {
+	required int32 result = 1; //0表示成功，其他值表示失败
+	required int32 value = 2; //红包券数额,1分钱为单位
+}
+
+message JoinMatch {
+	required int32 matchid = 1;
+}
+
+message MatchStatusReq {
+}
+
+message MatchStatusRep {
+	repeated int32 matchlist = 1;
+}
+
+message MatchResultNft {
+	required int32 range = 1;
+	required int32 gameid = 2;
+	required int32 matchid = 3;
+	required int32 continue = 4;
+}
+
+message MatchRangeReq {
+	required int32 matchid = 1;
+}
+
+message MatchRangeRep {
+	required int32 range = 1;
+}
+
+//获取任务信息
+message RequestTaskInfo {
+//	required int32 tasktype = 1; 			//任务类型	
+}
+
+message RequestTaskInfoResult {
+	message TaskInfo {
+		required int32 taskid = 1; 			//任务id
+		required int32 status = 2; 		//任务状态 1未达成 2已达成未领奖 3已领奖
+		required int32 progress1 = 3; 		//进度1
+		required int32 progress2 = 4; 		//进度2
+		required string endtime = 5;		//任务截止时间
+	}
+
+//	required int32 tasktype = 1; 			//任务类型	
+	repeated TaskInfo info = 1; 			//任务信息
+}
+
+//推送任务达成
+message PushTaskProgressChanged {
+	message TaskInfo {
+		required int32 taskid = 1;
+		optional int32 progress1 = 2;
+		optional int32 progress2 = 3;
+	}
+	repeated TaskInfo info = 1;
+}
+
+//领取任务奖励
+message RequestTaskReward{
+	required int32 taskid = 1;
+}
+
+message RequestTaskRewardResult{
+	required int32 result = 1; 				//-1任务id错误 1领取成功 -1任务未完成 -2已经领取过 -3任务过期
+}
+
+//请求保险箱余额
+message SafeMoneyReq {
+	required string pass = 1;
+}
+
+//返回保险箱余额
+message SafeMoneyRep {
+	required sint64 value = 1; // -1表示密码错误，-2表示还没设置密码， 请先设置密码
+}
+
+//重置保险箱密码
+message ResetSafePasswordReq {
+	required string oldpass = 1; //如果没有设置过密码，填“-1”，如果是通过手机充值密码，填"-2"
+	required string newpass = 2; //新密码
+	optional string code = 3; //验证码，如果是通过手机验证的话
+}
+
+message ResetSafePasswordRep {
+	required int32 result = 1; //0表示成功，其他值表示失败:1000请先设置密码，不能修改密码，1001老密码验证失败，1002已经设置过密码不能当第一次设置，1003密码格式不对,1004验证码不通过
+}
+
+//存钱请求
+message SaveSafeMoneyReq {
+	required sint64 value = 1; //存入金额
+	required string pass = 2;
+}
+
+//存钱请求回包
+message SaveSafeMoneyRep {
+	required int32 result = 1; // 0表示成功，其他值表示失败:1000请先设置密码,1001密码验证失败,1002还在游戏中不能存钱，退出游戏后再试,1003身上的钱不够
+	optional sint64 bank = 2; //银行剩余余额
+}
+
+//取钱请求
+message TakeSafeMoneyReq {
+	required sint64 value = 1; //取钱金额
+	required int32 channel = 2; //1表示h5平台，2表示app平台
+	required string pass = 3;
+}
+
+message TakeSafeMoneyRep {
+	required int32 result = 1; //0表示陈功，其他值表示失败
+	optional sint64 bank = 2; //银行剩余余额
+}
+
+message SafeStatusRep {
+}
+
+message SafeStatusReq {
+	required int32 haspass = 1; //0表示没有设置密码，1表示已经设置密码了
+	required int32 notify = 2; //0表示没有任何通知，1表示有人送钱来了
+}
+
+message CheckPassReq {
+	required string pass = 1;
+}
+
+message CheckPassRep {
+	required int32 result = 1; //0表示密码正确，其他值表示错误:1000表示没有设置过密码,1001密码错误
+}
+
+//请求查询存取记录
+message SafeHistroyReq {
+	required int32 year = 1; //2018表示2018年
+	required int32 month = 2; //2表示2月
+	required string pass = 3;
+}
+
+message SafeHistroyRep {
+	message info {
+		required int32 type = 1; //1表示从h5存钱到银行，2表示取钱到h5，3表示从app存钱到银行，4表示取钱到APP
+		required int32 time = 2; //linux时间戳
+		required sint64 value = 3; //存/取金额
+	}
+	required int32 index = 1; //当前数据块索引
+	required int32 total = 2; //总数据块个数
+	repeated info list = 3; //数据内容
+}
+
+//查询赠送/被赠送记录
+message TransferHistroyReq {
+	required int32 year = 1; //2018表示2018年
+	required int32 month = 2; //2表示2月
+	required int32 type = 3; //1表示查询赠送记录，2表示查询被赠送记录
+	required string pass = 4;
+}
+
+message TransferHistroyRep {
+	message info {
+		required int32 time = 1; //linux时间戳
+		required int32 value = 2; //金额
+		required int32 uid = 3; //赠送/被赠送人的uid
+		required string nickname = 4; //赠送/被赠送人的昵称
+	}
+	required int32 type = 1; //1表示赠送记录，2表示被赠送记录
+	required int32 index = 2; //当前数据块索引
+	required int32 total = 3; //总数据块的个数
+	repeated info list = 4;
+}
+
+message BindAwardsNtf {
+}
+
+message BindAwardsReq {
+}
+message BindAwardsRep {
+	required int32 value = 1; //绑定的奖励的红包数额，分为单位。-1还未绑定(过1秒再次请求)，-2已经领取
+}
+message BindParentNtf {
+	required int32 parent = 1; //需要绑定的上级
+}
+message GetInviteListReq {
+}
+message GetInviteListRep {
+	repeated int32 list = 1; //{uid,done,uid,done,uid,done...} done==1表示完成，done==0表示未完成
+}
+
+message CheckBuyStatusReq {
+}
+
+message CheckBuyStatusRep {
+	repeated int32 status = 1; //{shopid,shopid,shopid...} 不允许购买的物品
+}
+
+message BuyRealGoodsReq {
+	required int32 shopid = 1; //shop表里面的ID
+	required string phone = 2; //用户手机号码
+	optional string des = 3; //用户留下的其他信息,暂时不填
+}
+message BuyRealGoodsRep {
+	required int32 result = 1; // 1表示成功，其他值表示失败
+	required string phone = 2; //用户手机号码
+	optional string des = 3; //用户留下的其他信息,暂时不填
+}
+message GetTodayHongbaoReq {
+	
+}
+message GetTodayHongbaoRep {
+	required int32 value = 1; 
+}
+
+message GetBuyHistroyReq {
+	
+}
+
+message GetBuyHistroyRep {
+	repeated int32 list = 1; //shopid的列表
+}

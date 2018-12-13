@@ -1,0 +1,18 @@
+include "config.common"
+
+nodeindex = "0"
+nodename = "match"..nodeindex
+
+luaservice = luaservice .. root.."/server/game/?.lua;"..
+	root.."/server/game/logic/?.lua;"..
+	root.."/server/game/roomctrl/?.lua;"
+
+-- 将添加到 package.path 中的路径，供 require 调用。
+lua_path = lua_path .. root.."/server/game/?.lua;"..
+	root.."/server/game/logic/?.lua;"..
+	root.."/server/game/roomctrl/?.lua;"..
+	root.."/config/?.lua;"..
+	root.."/protocol/?.lua;"
+	
+snax = lua_path
+

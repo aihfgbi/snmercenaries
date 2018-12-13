@@ -1,0 +1,137 @@
+package gm;
+
+//游戏列表Req
+message GameListReq {
+}
+
+//游戏列表Rep
+message GameListRep {
+	message game {
+	    required int32 gameid = 1; //游戏Id
+	    required string gamename = 2; //游戏名称
+	    required int32 online = 3; //游戏在线
+	    required string type = 4; //游戏类型
+	}
+	repeated game games = 1; //游戏列表
+}
+
+//在线人数
+message OnlineNtf {
+    required int32 gameid = 1;
+    required int32 online = 2;
+}
+
+//玩家列表Req
+message PlayerListReq {
+}
+
+//玩家列表Rep
+message PlayerListRep {
+	message player{
+		required int32 uid = 1; //用户id
+		required sint64 gold = 2; //用户金币
+		required int32 hongbao = 3; //用户红包
+		required string nickname = 4; //用户昵称
+		required sint64 bankgold = 5; //用户银行金币
+		required sint64 entergold = 6; //用户最后转入金币（充值）
+		required sint64 weekwin = 7; //最近一周输赢
+		required int32 totalhongbao = 8; //累计红包
+	    optional int32 gameid = 9; //游戏Id
+	    optional string roomid = 10;//房间Id
+	    optional int32 ctrltype = 11; //控制类型(1:输,2：赢)
+	    optional int32 ctrlrate = 12; //控制概率(1~100)
+	    optional int32 ctrllevel = 13; //控制等级(1~12)
+	    optional sint64 ctrlmaxgold = 14; //控制最大输赢
+	    optional sint64 ctrlnowgold = 15; //控制当前输赢
+	    optional string ctrlstarttime = 16; //控制开始时间
+	    optional string ctrloverttime = 17; //控制结束时间
+	    optional int32 ctrlcount = 18; //控制次数
+	    optional int32 ctrlcaijin = 19; //控制彩金(1:不能中，2：可以中)
+	}
+	repeated player players = 1; //玩家列表
+	required int32 isover = 2; //是否结束(0:没结束,1:结束)
+}
+
+//玩家上线
+message PlayerOnLineNtf {
+	required int32 uid = 1; //用户id
+	required sint64 gold = 2; //用户金币
+	required int32 hongbao = 3; //用户红包
+	required string nickname = 4; //用户昵称
+	required sint64 bankgold = 5; //用户银行金币
+	required sint64 entergold = 6; //用户最后转入金币（充值）
+	required sint64 weekwin = 7; //最近一周输赢
+	required int32 totalhongbao = 8; //累计红包
+	optional int32 gameid = 9; //游戏Id
+	optional string roomid = 10;//房间Id
+	optional int32 ctrltype = 11; //控制类型(1:输,2：赢)
+	optional int32 ctrlrate = 12; //控制概率（1~100）
+	optional int32 ctrllevel = 13; //控制等级(1~12)
+	optional sint64 ctrlmaxgold = 14; //控制最大输赢
+	optional sint64 ctrlnowgold = 15; //控制当前输赢
+	optional string ctrlstarttime = 16; //控制开始时间
+	optional string ctrloverttime = 17; //控制结束时间
+	optional int32 ctrlcount = 18; //控制次数
+	optional int32 ctrlcaijin = 19; //控制彩金(1:不能中，2：可以中)
+}
+
+//玩家离线
+message PlayerOffLineNtf {
+	required int32 uid = 1; //用户id
+}
+
+//金币改变
+message PlayerGoldChangeNtf {
+	required int32 uid = 1; //用户id
+	required sint64 gold = 2; //用户金币
+	required int32 hongbao = 3; //用户红包
+	required sint64 bankgold = 4; //用户银行金币
+	required sint64 entergold = 5; //用户最后转入金币（充值）
+	required sint64 weekwin = 6; //最近一周输赢
+	required int32 totalhongbao = 7; //累计红包
+	optional sint64 ctrlnowgold = 8; //控制当前输赢
+}
+
+//玩家进入游戏
+message PlayerEnterGameNtf {
+	required int32 uid = 1; //用户id
+	required int32 gameid = 2; //游戏Id
+	optional string roomid = 3;//房间Id
+}
+
+//玩家离开游戏
+message PlayerLeaveGameNtf {
+	required int32 uid = 1; //用户id
+	required int32 gameid = 2; //游戏Id
+}
+
+//开始控制
+message PlayerStartCtrl {
+	required int32 uid = 1; //用户id
+	required int32 ctrltype = 2; //控制类型(1:输,2：赢)
+	required int32 ctrlrate = 3; //控制概率（1~100）
+	required int32 ctrllevel = 4; //控制等级(1~12)
+	required sint64 ctrlmaxgold = 5; //控制最大输赢
+	required string ctrlstarttime = 6; //控制开始时间
+	required string ctrloverttime = 7; //控制结束时间
+	optional int32 ctrlcount = 8; //控制次数
+	optional int32 ctrlcaijin = 9; //控制彩金(1:不能中，2：可以中)
+}
+
+//结束控制
+message PlayerStopCtrl {
+	required int32 uid = 1; //用户id
+}
+
+//全局控制
+message TotalCtrl {
+	required int32 ctrltype = 1; //控制类型(1:输,2：赢)
+	required int32 ctrlrate = 2; //控制概率（1~100）
+}
+
+//GM心跳包
+message GMHart{
+	
+}
+
+

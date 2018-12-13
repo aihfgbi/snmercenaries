@@ -1,0 +1,78 @@
+skynetroot = "../skynet/"
+root = "../serviceqq/"
+thread = 8
+logger = nil
+
+logpath = "."
+harbor = 0
+start = "main"	-- main script
+bootstrap = "snlua bootstrap"	-- The service for bootstrap
+
+-- 集群名称配置文件
+cluster = root.."clustername.lua"
+
+lualoader = skynetroot .. "lualib/loader.lua"
+
+-- 用于加载LUA服务的LUA代码
+preload = root.."common/preload.lua"	-- run preload.lua before every lua service run
+
+-- C编写的服务模块路径
+cpath = skynetroot .. "cservice/?.so"
+
+-- 将添加到 package.cpath 中的路径，供 require 调用。
+lua_cpath = skynetroot .. "luaclib/?.so;" .. 
+	root.."luaclib/?.so;"
+
+luaservice = skynetroot .. "service/?.lua;"..
+    root.."lualib/?.lua;"..
+	root.."common/?.lua;"..
+	root.."config/?.lua;"
+
+lua_path = skynetroot .. "lualib/?.lua;"..
+    root.."lualib/?.lua;"..
+	root.."common/?.lua;"
+
+
+redis_host = "39.98.93.182"
+redis_port = 25258
+redis_pwd = "sx@WsLaAt^v4oiSIQ6r"
+redis_maxconn = 3
+
+log_redis_host = "39.98.93.182"
+log_redis_port = 25258
+log_redis_pwd = "sx@WsLaAt^v4oiSIQ6r"
+log_redis_maxconn = 3
+
+mysql_host = "118.24.147.183"
+mysql_port = 3306
+mysql_db = "accountsdb"
+mysql_user = "root"
+mysql_pwd = "admin"
+mysql_maxconn = 10
+
+his_mysql_host = "118.24.147.183"
+his_mysql_port = 3306
+his_mysql_db = "scorelog"
+his_mysql_user = "root"
+his_mysql_pwd = "root"
+his_mysql_maxconn = 10
+
+bank_host = "10.0.21.250"
+bank_port = 7788
+
+logname = "loglist"
+
+dbs_count = 1 --userdata节点的数量
+game_count = 1 --game节点的数量
+goldgame_count = 1 --goldgame节点的数量
+
+customs_log_path = logger
+
+
+use_debug = 0 --注意此处配置文件中的数据不能分辨布尔值，如果这里写true或者FALSE会被认为是一个string，用来判断会永远为真
+
+-- use_center_bank = true
+
+rank_list_name = "ld_game"
+
+verification_code = "5d9195f260a4e8df2e903770bfe128ec"

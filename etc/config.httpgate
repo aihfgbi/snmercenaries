@@ -1,0 +1,17 @@
+include "config.common"
+
+nodename = "httpgate"
+
+luaservice = luaservice .. root.."server/httpserver/?.lua;"
+-- 将添加到 package.path 中的路径，供 require 调用。
+lua_path = lua_path .. root.."server/httpserver/?.lua;"..
+		   	root.."config/?.lua;"..
+		   	root.."protocol/?.lua;"
+snax = lua_path
+
+port = 8903					-- 监听端口
+
+-- 后台模式
+--daemon = root.."pid/"..nodename..".pid"
+
+--logger = root.."h5gamelog/"..nodename..".log"

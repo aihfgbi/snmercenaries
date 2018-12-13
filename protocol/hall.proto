@@ -1,0 +1,212 @@
+package hall;
+//流程:  前端鏈接，收到前端鏈接->生成驗證碼發送給前端->前端發送商議好的驗證碼過來進行驗證->返回驗證成功->进入登陆流程->发送心跳链接完成
+// 游戏列表
+// 大厅金币
+// 银行
+// 邮件
+// 提现
+enum MsgType {
+	REQ_CONNECT = 10001; //请求连接
+	RES_CONNECT = 20001; //请求连接
+	REQ_VERIFICATION = 10002;//请求验证
+	RES_VERIFICATION = 20002;//请求验证
+	REQ_LOGIN = 10003;//登陆
+	RES_LOGIN = 20003;//登陆返回
+	REQ_REFRESH_INFO = 10004;//刷新用戶信息
+	RES_REFRESH_INFO = 20004;//用戶信息返回
+	REQ_HEART = 10005;//心跳
+	RES_HEART = 20005;//心跳
+	REQ_GAME_LIST = 10006;//游戏列表
+	RES_GAME_LIST = 20006;//游戏列表返回
+	REQ_BANK_INFO = 10007;//请求银行数据
+	RES_BANK_INFO = 20007;//请求银行数据
+	REQ_BANK_ACCESS = 10008;//存取
+	RES_BANK_ACCESS = 20008;//存钱返回
+	REQ_BANK_CODE_CHANGE = 10009;//修改银行密码
+	RES_BANK_CODE_CHANGE = 20009;//修改银行密码
+	REQ_MAIL_LIST = 10010;//请求邮件列表
+	RES_MAIL_LIST = 20010;//请求邮件列表
+	REQ_MAIL_READ = 10011;//将邮件标为已读
+	RES_MAIL_READ = 20011;//将邮件标为已读
+	REQ_MAIL_NEW = 10012;//请求时候有新邮件
+	RES_MAIL_NEW = 20012;//请求是否有新邮件，如果有新邮件会主动发送
+	REQ_EXCHANGE_GOLD = 10013;//金币兑换
+	RES_EXCHANGE_GOLD = 20013;//金币兑换返回
+
+	// 0 客户端发起的socke关闭, reason = 1 被挤下线, reason = 2 解码失败， reason = 3 超时 , reason = 4 被锁定 5 数据包太大了  6 被封号
+	// 7 意外错误，有玩家在线，但是再次请求了开启一个userdata服务，处理方式是将之前的一个agent踢掉(被挤号)
+	// 8 找不到game服
+	// 9 停服了
+	RES_KICK_USER = 29999;//踢出用户
+}
+
+//REQ_LOGIN = 10003;//登陆
+message reqLogin {
+	optional string token = 1;
+}
+
+//RES_LOGIN = 20003;//登陆返回
+message resLogin {
+// 	--数据错误全部返回 		199  
+// --服务器还没准备好		101
+// --重复登录请求 		 	104
+// --需要重新登录		 	200
+// --账号被冻结			105
+// --验证账号冻结出错      106
+// --token验证不通过       108
+// --redis设置的用户信息有误 109
+// --服务器已经关闭		110
+	optional int32 result = 1;//登陆结果
+}
+
+//REQ_HEART = 10005;//心跳
+message reqHeart {
+}
+//RES_HEART = 20005;//心跳
+message resHeart {
+	optional int32 time = 1;//时间戳
+}
+
+//REQ_REFRESH_INFO = 10004;//刷新用戶信息
+message reqRefreshInfo {
+	optional int32 uid = 1;
+	optional int32 type = 2;//请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像
+}
+
+//RES_REFRESH_INFO = 20004;//用戶信息返回
+message resRefreshInfo {
+	optional int32 uid = 1;
+	optional int32 type = 2;
+	optional int64 gold = 3;
+	optional int64 bank = 4;
+	optional int32 level = 5;
+	optional int32 vipexp = 6;
+	optional int32 sex = 7;
+	optional int32 charged = 8;//已充值金额
+	optional int32 gameid = 9;//游戏id
+
+	optional string headimg = 12;
+	optional string nickname = 13;
+	optional string signature = 14;//自定义签名
+	
+	optional string phone = 15;
+	optional string alipayacc = 16;
+	optional string alipayrealname = 17;
+	optional string bankacc = 18;
+	optional string bankrealname = 19;
+}
+
+//REQ_GAME_LIST = 10006;//游戏列表
+message reqGameList {
+}
+
+message room {
+	optional int32 roomid = 1;
+	optional int32 basescore = 2;//底分，单位：分
+	optional int32 goldlimit = 3;//入场限制，单位：分
+	optional string roomname = 4;
+}
+
+message game {
+	optional int32 gameid = 1;
+	optional int32 isopen = 2;
+	optional string version = 3;
+	optional string gamename = 4;
+	repeated room roomlist = 5;
+}
+
+//RES_GAME_LIST = 20006;//游戏列表返回
+message resGameList {
+	repeated game gamelist = 1;
+}
+
+//----------------------银行------------------------start
+
+//REQ_BANK_INFO = 10007;//请求银行数据
+message reqBankInfo {
+	optional string pwd = 1 [default = "0"];//密码默认传0
+}
+
+//RES_BANK_INFO = 20007;//请求银行数据
+message resBankInfo {
+	optional int64 bank = 1; //银行余额，-1表示密码错误，-2表示还没设置密码
+}
+
+//REQ_BANK_ACCESS = 10008;//存取
+message reqBankAccess {
+	optional int32 type = 1; //类型 1存钱 2取钱
+	optional int64 gold = 2; //存取金额，
+	optional string pwd = 3 [default = "0"];//密码默认传0
+}
+
+//RES_BANK_ACCESS = 20008;//存钱返回
+message resBankAccess {
+	optional int32 result = 1;//1成功 2游戏中不能操作 3身上钱不够 4密码错误 5还没有设置密码
+	optional int64 bank = 2;//银行余额
+}
+
+//REQ_BANK_CODE_CHANGE = 10009;//修改银行密码
+message reqBankCodeChange {
+	optional int32 type = 1; //1设置密码 2重置密码
+	optional string pwd = 2; //新密码
+	optional string code = 3; //验证码
+}
+
+//RES_BANK_CODE_CHANGE = 20009;//修改银行密码
+message resBankCodeChange {
+	optional int32 result = 1;//1成功 2验证码错误 3密码不符合规则
+}
+
+//----------------------银行------------------------end
+
+
+//----------------------邮件------------------------start
+
+//REQ_MAIL_LIST = 10010;//请求邮件列表
+message reqMailList {
+}
+
+message mail {
+	optional int32 id = 1;
+	optional int32 isread = 2;//是否已读，未领取金币也视为未读，已领取金币视为已读
+	optional int64 gold = 3;
+	optional string title = 4;//标题
+	optional string content = 5;//内容
+	
+}
+
+//RES_MAIL_LIST = 20010;//请求邮件列表
+message resMailList {
+	optional mail maillist = 1;//邮件列表
+}
+
+//REQ_MAIL_READ = 10011;//将邮件标为已读
+message reqMailRead {
+	optional int32 id = 1;//邮件ID
+}
+
+//RES_MAIL_READ = 20011;//将邮件标为已读
+message resMailRead {
+	optional int32 result = 1;//1成功 2重复操作 3邮件不存在
+}
+
+//REQ_MAIL_NEW = 10012;//请求是否有新邮件
+message reqMailNew {
+}
+
+//RES_MAIL_NEW = 20012；//请求是否有新邮件，如果有新邮件会主动发送
+message resMailNew {
+	optional int32 unreadnum = 1;//未读邮件条数
+}
+
+//----------------------邮件------------------------end
+
+//REQ_EXCHANGE_GOLD = 10013;//金币兑换
+message reqExchangeGold {
+	optional int64 gold = 1;
+}
+
+//RES_EXCHANGE_GOLD = 20013;//金币兑换返回
+message resExchangeGold {
+	optional int32 result = 1; //1成功 2身上钱不够 3超过单次提现限额 4超过每日提现限额 5超过每日提现次数 6请求连接失败
+}
