@@ -47,31 +47,33 @@ local string = string
 
 local logic
 
--- optional string nickname = 3; 	1	1
--- optional int32 gold = 4;			2	2
--- optional int32 bank = 5;			3	4
--- optional int32 exp = 6;			4	8
--- optional int32 vipexp = 7;		5	16
--- optional int32 sex = 8;			6	32
--- optional string headimg = 9;		7	64
--- optional string usermsg = 10;	8	128
--- optional int32 money = 11;		9	256
--- optional int32 hongbao = 12;		10	512
--- optional int32 wincount = 13;	11	1024
--- optional int32 charged = 14;		12	2048
+-- optional int32 uid = 1;
+-- optional int32 type = 2;
+-- optional int64 gold = 3;
+-- optional int64 bank = 4;
+-- optional int32 level = 5;
+-- optional int32 vipexp = 6;
+-- optional int32 sex = 7;
+-- optional int32 charged = 8;//已充值金额
+-- optional int32 gameid = 9;//游戏id
+
+-- optional string headimg = 12;
+-- optional string nickname = 13;
+-- optional string signature = 14;//自定义签名
+
+-- optional string phone = 15;
+-- optional string alipayacc = 16;
+-- optional string alipayrealname = 17;
+-- optional string bankacc = 18;
+-- optional string bankrealname = 19;
+--请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像 6已充值金额
 userdataFlag = {
-	nickname = 1,
-	gold = 2,
-	bank = 4,
-	exp = 8,
-	vipexp = 16,
-	sex = 32,
-	headimg = 64,
-	usermsg = 128,
-	money = 256,
-	hongbao = 512,
-	wincount = 1024,
-	charged = 2048
+	gold = 1,--gold bank
+	bind = 2,--phone alipayacc alipayrealname bankacc bankrealname
+	signature = 3,--signature
+	level = 4,--level vipexp
+	headimg = 5,--headimg
+	charged = 6 --charged
 }
 --全局变量
 
@@ -354,7 +356,7 @@ local function send_to_client(name, msg)
 	end
 	local ok, result = pcall(cluster.send, agnode, agaddr, "send_to_client", _uid, name, msg)
 	if not ok then
-	-- agent离线了
+	LOG_DEBUG("agent离线")
 	end
 end
 
@@ -377,21 +379,21 @@ local function update_client_info(...)
 	local msg = {uid = _uid}
 	local type = 0
 	for _, k in pairs(keys) do
-		if k == "charged" then
+		if k == "gold" then
 			msg[k] = _userdata[k] or 0
-			if userdataFlag[k] then
-				type = type + userdataFlag[k]
-			end
+			msg["bank"] = _userdata["bank"] or 0
+		elseif k == "bind" then--phone alipayacc alipayrealname bankacc bankrealname
+		elseif k == "level" then--level vipexp
 		elseif _userdata[k] then
 			msg[k] = _userdata[k]
-			if userdataFlag[k] then
-				type = type + userdataFlag[k]
-			end
+		end
+		if userdataFlag[k] then
+			type = userdataFlag[k]
 		end
 	end
 
 	msg.type = type
-	send_to_client("user.UserInfoResonpse", msg)
+	send_to_client("hall.resRefreshInfo", msg)
 end
 
 local function send_to_gmctrl(cmd, ...)
@@ -431,7 +433,7 @@ function CMD.start(mgr, nodename)
 	skynet.fork(time_timer)
 end
 
-function CMD.online(uid, node, addr, ip, nickname)
+function CMD.online(uid, node, addr)
 	LOG_DEBUG("user data online:" .. uid)
 	if online and agnode and agaddr then
 		LOG_DEBUG(agnode .. "," .. agaddr)

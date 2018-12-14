@@ -2,6 +2,7 @@ local skynet = require "skynet"
 local cluster = require "skynet.cluster"
 local json = require "cjson"
 local crypt = require "skynet.crypt"
+local headimgurl = skynet.getenv("headimgurl")
 
 local base64encode = crypt.base64encode
 
@@ -541,10 +542,11 @@ function this.reqRefreshInfo(msg)
         -- optional string bankacc = 18;
         -- optional string bankrealname = 19;
 
+        --检测是否在游戏中
         local gameid = 0
         if gamenode and gameaddr then
-            -- gameaddr = tonumber(gameaddr)
-            -- luadump(player)
+            gameaddr = tonumber(gameaddr)
+            luadump(player)
             local ok,result =pcall(cluster.call,gamenode, gameaddr,"check_player",uid,player.agnode,player.agaddr,player.datnode,player.dataddr)
             if ok and result then
                 LOG_DEBUG("需要断线重连:" .. uid .. ",gameid:" .. result)
@@ -569,7 +571,7 @@ function this.reqRefreshInfo(msg)
                 signature = userdata.signature or " ",
                 hongbao = userdata.hongbao or 0,
                 money = userdata.money or 0,
-                headimg = userdata.headimg,
+                headimg = userdata.headimg or string.format( headimgurl,RAND_NUM(1,4000) ),
                 gameid = gameid,
                 charged = userdata.charged or 0
             }

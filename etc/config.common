@@ -76,3 +76,5 @@ use_debug = 0 --注意此处配置文件中的数据不能分辨布尔值，如�
 rank_list_name = "ld_game"
 
 verification_code = "5d9195f260a4e8df2e903770bfe128ec"
+
+headimgurl = "http://39.98.93.182/headImg%d.jpg"

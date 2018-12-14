@@ -223,14 +223,14 @@ function CMD.start(conf)
 	_dbnode = conf.dbnode
 	_dbaddr = conf.dbaddr
 	local nodename = conf.nodename
-	local ip = conf.userinfo.lastIp
 	_timeout_count = 0
 	_gate_type = conf.gate_type
 	_session = conf.session
 
+	luadump(conf,"conf====")
 	-- 初始化userdata
 	-- function CMD.online(uid, node, addr, ip, nickname)调用了userdata/userdata.lua里面的CMD.online函数
-	local ok, result = pcall(cluster.call, _dbnode, _dbaddr, "online", _uid, nodename, skynet.self(), ip, conf.nickname)
+	local ok, result = pcall(cluster.call, _dbnode, _dbaddr, "online", _uid, nodename, skynet.self())
 	if not ok or not result then
 		LOG_DEBUG("error:调用dbs的online失败:"..tostring(_uid))
 		return false

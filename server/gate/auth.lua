@@ -257,36 +257,7 @@ function SOCKET.open(fd, addr)
     send_msg_to_client(fd, msgcmd["hall.resConnect"], "success")
 end
 
---[[
-    @desc: 随机生成一个指定长度的验证码发给前端
-    author:{author}
-    time:2018-12-06 23:31:03
-    --@len: 
-    @return:
-]]
-local function rand_session(len)
-    local big = "QWERTYUIOPASDFGHJKLZXCVBNM"
-    local small = "qwertyuiopasdfghjklzxcvbnm"
-    local num = "1234567890"
-    local tmpLen = len
-    local tmpStr = nil
-    local function random(n, m)
-        math.randomseed(os.clock() * math.random(1000000, 9000000) + math.random(1000000, 9000000))
-        return math.random(n, m)
-    end
-    if not tmpLen then
-        tmpLen = random(10, 20)
-    end
-    tmpStr = big .. small .. num
 
-    local maxLen = string.len(tmpStr)
-    local str = {}
-    for i = 1, tmpLen do
-        local index = random(1, maxLen)
-        str[i] = string.sub(tmpStr, index, index)
-    end
-    return table.concat(str, "")
-end
 
 --[[
     @desc: 收到消息执行验证
@@ -306,7 +277,7 @@ function SOCKET.auth(fd, sz, msg)
         local code = string.sub(msg, 10, sz)
         -- LOG_DEBUG("code:" .. code .. ",verificationCode:" .. verificationCode)
         if session == "0000" and code == verificationCode then
-            local tmp = rand_session(4)
+            local tmp = RAND_STR(4)
             sessionlist[fd] = tmp
             send_msg_to_client(fd, msgcmd["hall.resVerification"], tmp)
         else --验证失败直接踢掉
@@ -319,7 +290,7 @@ function SOCKET.auth(fd, sz, msg)
             LOG_DEBUG("auth:" .. tostring(result) .. "," .. fd)
             if result then
                 skynet.call(gate, "lua", "stop", fd, result)
-                local dd = pcall(protobuf.encode, "hall.resLogin", {result = result})
+                local ok,dd = pcall(protobuf.encode, "hall.resLogin", {result = result})
                 send_msg_to_client(fd, msgcmd["hall.resLogin"], dd)
             end
         else
