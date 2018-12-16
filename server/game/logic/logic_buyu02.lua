@@ -1118,7 +1118,7 @@ function this.get_tableinfo(p)
 		msg.endtime = endtime
 		msg.playedtimes = 0
 	end
-	msg.gameid = 0
+	msg.gameid = 1000
 	msg.times = 0
 	msg.score = basetype or 0
 	msg.paytype = pay

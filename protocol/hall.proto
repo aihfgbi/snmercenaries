@@ -57,6 +57,7 @@ message resLogin {
 // --redis设置的用户信息有误 109
 // --服务器已经关闭		110
 	optional int32 result = 1;//登陆结果
+	optional int32 uid = 2;
 }
 
 //REQ_HEART = 10005;//心跳
@@ -69,22 +70,23 @@ message resHeart {
 
 //REQ_REFRESH_INFO = 10004;//刷新用戶信息
 message reqRefreshInfo {
-	optional int32 uid = 1;
-	optional int32 type = 2;//请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像
+	required int32 uid = 1;
+	required int32 type = 2;//请求刷新的类型，1所有信息，2金币 3绑定信息 4自定义签名 5等级和经验 6头像
 }
 
 //RES_REFRESH_INFO = 20004;//用戶信息返回
 message resRefreshInfo {
 	optional int32 uid = 1;
 	optional int32 type = 2;
-	optional int64 gold = 3;
-	optional int64 bank = 4;
+	optional sint64 gold = 3;
+	optional sint64 bank = 4;
 	optional int32 level = 5;
 	optional int32 vipexp = 6;
 	optional int32 sex = 7;
 	optional int32 charged = 8;//已充值金额
 	optional int32 gameid = 9;//游戏id
-
+	optional int32 gametype = 10;//游戏type
+ 
 	optional string headimg = 12;
 	optional string nickname = 13;
 	optional string signature = 14;//自定义签名
@@ -100,19 +102,21 @@ message resRefreshInfo {
 message reqGameList {
 }
 
+//房间属性
 message room {
-	optional int32 roomid = 1;
+	optional int32 roomid = 1;//房间id
 	optional int32 basescore = 2;//底分，单位：分
 	optional int32 goldlimit = 3;//入场限制，单位：分
-	optional string roomname = 4;
+	optional string roomname = 4;//房间名字，初级场，中级场等
 }
 
+//游戏属性
 message game {
-	optional int32 gameid = 1;
-	optional int32 isopen = 2;
-	optional string version = 3;
-	optional string gamename = 4;
-	repeated room roomlist = 5;
+	optional int32 gameid = 1;//游戏id 麻将=1
+	optional int32 isopen = 2;//是否开启
+	optional string version = 3;//版本号
+	optional string gamename = 4;//游戏名字
+	repeated room roomlist = 5;//房间列表
 }
 
 //RES_GAME_LIST = 20006;//游戏列表返回
@@ -209,4 +213,25 @@ message reqExchangeGold {
 //RES_EXCHANGE_GOLD = 20013;//金币兑换返回
 message resExchangeGold {
 	optional int32 result = 1; //1成功 2身上钱不够 3超过单次提现限额 4超过每日提现限额 5超过每日提现次数 6请求连接失败
+}
+
+//快速加入开房模式
+message QuickJoinRequest {
+	optional int32 roomid = 1;
+	optional int32 gameid = 2;
+	optional int32 gametype = 3
+	optional int32 pay = 4;
+	optional int32 score = 5;
+	optional int32 times = 6;
+	repeated int32 params = 7;
+}
+
+message QuickJoinGoldGameReq {
+	required int32 gameid = 1;
+}
+
+message QuickJoinResonpse {
+	required int32 result = 1; //0成功，1失败
+	required int32 gameid = 2; //进入的游戏ID(如果是比赛，则表示比赛的id)
+	required int32 ismatch = 3; //是否是比赛
 }

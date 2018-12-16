@@ -112,77 +112,77 @@ end
 
 local function get_new_user(nn)
 	-- 新用户
-	LOG_DEBUG("新用户:" .. tostring(_uid))
-	local ok, data = pcall(skynet.call, _redis, "lua", "execute", "get", "user:" .. tostring(_uid))
-	if not ok or not data then
-		if use_debug == "0" or nn then
-			return {
-				gold = 5000,
-				money = 10000,
-				bank = 0,
-				nickname = nn or "用户" .. tostring(_uid),
-				exp = 0,
-				vipexp = 0,
-				sex = 1,
-				headimg = "",
-				usermsg = ""
-			}
-		else
-			return
-		end
-	end
-	local ok, info = pcall(json.decode, data)
-	if not ok or not info then
-		if use_debug == "0" or nn then
-			return {
-				gold = 5000,
-				money = 10000,
-				bank = 0,
-				nickname = nn or "用户" .. tostring(_uid),
-				exp = 0,
-				vipexp = 0,
-				sex = 1,
-				headimg = "",
-				usermsg = ""
-			}
-		else
-			return
-		end
-	end
-	if info.nickname and #info.nickname > 0 then
-		info.nickname = base64decode(info.nickname)
-	end
-	-- LOG_DEBUG(data)
-	info.gender = math.floor(tonumber(info.gender or 1) or 1)
-	info.avatar = tostring(info.avatar) or ""
-	if info.avatar == "userdata: (nil)" or info.avatar == "userdata:(nil)" or info.avatar == "nil" then
-		info.avatar = ""
-	end
-	-- luadump(info)
-	return {
-		gold = 5000,
-		money = 10000,
-		bank = 0,
-		nickname = info.nickname or "用户" .. tostring(_uid),
-		exp = 0,
-		vipexp = 0,
-		sex = info.gender,
-		headimg = info.avatar,
-		usermsg = ""
-	}
+	-- LOG_DEBUG("新用户:" .. tostring(_uid))
+	-- local ok, data = pcall(skynet.call, _redis, "lua", "execute", "get", "user:" .. tostring(_uid))
+	-- if not ok or not data then
+	-- 	if use_debug == "0" or nn then
+	-- 		return {
+	-- 			gold = 5000,
+	-- 			money = 10000,
+	-- 			bank = 0,
+	-- 			nickname = nn or "用户" .. tostring(_uid),
+	-- 			exp = 0,
+	-- 			vipexp = 0,
+	-- 			sex = 1,
+	-- 			headimg = "",
+	-- 			usermsg = ""
+	-- 		}
+	-- 	else
+	-- 		return
+	-- 	end
+	-- end
+	-- local ok, info = pcall(json.decode, data)
+	-- if not ok or not info then
+	-- 	if use_debug == "0" or nn then
+	-- 		return {
+	-- 			gold = 5000,
+	-- 			money = 10000,
+	-- 			bank = 0,
+	-- 			nickname = nn or "用户" .. tostring(_uid),
+	-- 			exp = 0,
+	-- 			vipexp = 0,
+	-- 			sex = 1,
+	-- 			headimg = "",
+	-- 			usermsg = ""
+	-- 		}
+	-- 	else
+	-- 		return
+	-- 	end
+	-- end
+	-- if info.nickname and #info.nickname > 0 then
+	-- 	info.nickname = base64decode(info.nickname)
+	-- end
+	-- -- LOG_DEBUG(data)
+	-- info.gender = math.floor(tonumber(info.gender or 1) or 1)
+	-- info.avatar = tostring(info.avatar) or ""
+	-- if info.avatar == "userdata: (nil)" or info.avatar == "userdata:(nil)" or info.avatar == "nil" then
+	-- 	info.avatar = ""
+	-- end
+	-- -- luadump(info)
+	-- return {
+	-- 	gold = 5000,
+	-- 	money = 10000,
+	-- 	bank = 0,
+	-- 	nickname = info.nickname or "用户" .. tostring(_uid),
+	-- 	exp = 0,
+	-- 	vipexp = 0,
+	-- 	sex = info.gender,
+	-- 	headimg = info.avatar,
+	-- 	usermsg = ""
+	-- }
 end
 
 local function insert_new_user()
-	LOG_DEBUG("insert user into mysql:" .. _uid)
-	local d = get_new_user()
-	if not d then
-		return
-	end
-	local sql =
-		"INSERT INTO tbl_user_info_" ..
-		(_uid % 10) ..
-			"(UserID,GameID,NickName,OwnCash,BankCash,Diamond,UserType,UserInfo1,UserInfo2,UserInfo3)" ..
-				" VALUES(" .. _uid .. "," .. _uid .. ",'" .. d.nickname .. "',0,0,0,1,NULL,NULL,NULL)"
+	-- LOG_DEBUG("insert user into mysql:" .. _uid)
+	-- local d = get_new_user()
+	-- if not d then
+	-- 	return
+	-- end
+	-- local sql =
+	-- 	"INSERT INTO tbl_user_info_" ..
+	-- 	(_uid % 10) ..
+	-- 		"(UserID,GameID,NickName,OwnCash,BankCash,Diamond,UserType,UserInfo1,UserInfo2,UserInfo3)" ..
+	-- 			" VALUES(" .. _uid .. "," .. _uid .. ",'" .. d.nickname .. "',0,0,0,1,NULL,NULL,NULL)"
 
 	--for i=1,3 do
 	--	local ok,t = pcall(skynet.call, ".mysqlpool", "lua", "execute", sql)
@@ -192,7 +192,7 @@ local function insert_new_user()
 	--	end
 	--end
 
-	return d
+	-- return d
 end
 
 local function load_userdata()
@@ -210,6 +210,7 @@ local function load_userdata()
 				_userdata = userinfo
 				_userdata.id = math.floor(userinfo.id)
 				_userdata.userType = math.floor(userinfo.userType)
+				_userdata.sex = math.floor(userinfo.sex)
 				-- 获取用户金币和银行信息
 				ok, data = pcall(skynet.call, _redis, "lua", "execute", "hget", "USER-ACCOUNT_INFO", _uid .. "#1001")
 				if ok then
@@ -459,12 +460,12 @@ function CMD.online(uid, node, addr)
 		dataddr = skynet.self(),
 		nickname = _userdata.nickName,
 		gold = _userdata.gold,
-		headimg = _userdata.headimg,
+		headimg = _userdata.headImg,
 		money = 0,
-		sex = _userdata.sex,
+		sex = _userdata.sex or 1,
 		bank = _userdata.bank,
-		hongbao = 0,
-		totalhongbao = _userdata.totalhongbao or 0
+		-- hongbao = 0,
+		-- totalhongbao = _userdata.totalhongbao or 0
 	}
 
 	if _userdata.ctrltype then
@@ -495,9 +496,8 @@ function CMD.online(uid, node, addr)
 	log(
 		"online",
 		string.format(
-			'{"gold":%d,"money":%d,"bank":%d,"did":"-","ip":"%s","location":"-","client":"-","os":"-"}',
+			'{"gold":%d,"bank":%d,"did":"-","ip":"%s","location":"-","client":"-","os":"-"}',
 			_userdata.gold or 0,
-			_userdata.money or 0,
 			_userdata.bank or 0,
 			ip or "-"
 		)
@@ -526,21 +526,19 @@ function CMD.online(uid, node, addr)
 			"user_map",
 			_uid,
 			string.format(
-				'{"uid":%d,"gold":%d,"money":%d,"bank":"%s","charged":"%s","hongbao":"%s","channel":0,"gameid":%d,"onlinetime":"%s","jointime":"%s","nickname":"%s"}',
+				'{"uid":%d,"gold":%d,"bank":"%s","charged":"%s","channel":0,"gameid":%d,"onlinetime":"%s","jointime":"%s","nickname":"%s"}',
 				_uid,
 				_userdata.gold,
-				_userdata.money,
 				_userdata.bank,
 				_userdata.charged,
-				_userdata.hongbao,
 				0,
 				onlinetime or 0,
 				"0",
-				_userdata.nickname
+				_userdata.nickName
 			)
 		)
 	end
-
+	LOG_DEBUG("用户上线成功")
 	return true
 end
 

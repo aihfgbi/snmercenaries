@@ -47,15 +47,24 @@ local function msg_decode(data)
 
 	-- end
 
-	assert(data and #data>=9, "agent msg_decode fail, #data < 2  #data="..#data)
+	if #data < 9 then
+		LOG_DEBUG("agent msg_decode fail, #data < 9  #data="..#data)
+		return
+	end
 
 	local msgid = data:sub(1, 5)
 	local name = msgcmd[msgid]
 	msgid = tonumber(msgid)
-	assert(name, "agent msg_decode unkonw msg, msgid="..msgid)
-
-	local ss = "124f"--data:sub(6, 9)
-	assert(ss == _session, "agent msg_decode session error, msgid="..msgid)
+	if not name then
+		LOG_DEBUG("agent msg_decode unkonw msg, msgid="..msgid)
+		return
+	end
+	
+	local ss = data:sub(6, 9)
+	if ss ~= _session then
+		LOG_DEBUG("agent msg_decode session error, msgid="..msgid)
+		return
+	end
 
 	local ok,msg
 	if #data > 9 then
@@ -63,7 +72,11 @@ local function msg_decode(data)
 		assert(ok and msg, "agent msg_decode protobuf.decode fail, msgid="..msgid)
 		luadump(msg,"msg_decode,msg========")
 	end
-	LOG_DEBUG("解析消息成功->"..msgid..",name:"..name)
+	if msgid ~= 10005 then
+		-- body
+		LOG_DEBUG("解析消息成功->"..msgid..",name:"..name)
+	end
+
 	return msgid,name,msg
 end
 
@@ -227,7 +240,6 @@ function CMD.start(conf)
 	_gate_type = conf.gate_type
 	_session = conf.session
 
-	luadump(conf,"conf====")
 	-- 初始化userdata
 	-- function CMD.online(uid, node, addr, ip, nickname)调用了userdata/userdata.lua里面的CMD.online函数
 	local ok, result = pcall(cluster.call, _dbnode, _dbaddr, "online", _uid, nodename, skynet.self())
@@ -242,7 +254,7 @@ function CMD.start(conf)
 	-- 登录成功了！！
 	LOG_DEBUG("send time:"..time.time())
 	LOG_DEBUG("%d登录成功了",_uid)
-	local ok,data = pcall(msg_encode, "hall.resLogin", {result = 1})
+	local ok,data = pcall(msg_encode, "hall.resLogin", {result = 1,uid = _uid})
 	if ok then
 		send_package(data)
 	end

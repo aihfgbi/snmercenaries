@@ -518,10 +518,13 @@ function this.BuyReq(msg)
 end
 
 function this.reqRefreshInfo(msg)
+    LOG_DEBUG("收到了刷新用户信息，"..uid)
+    luadump(msg,"msg=====")
     if not msg then
         return
     end
-    if msg.uid == uid then
+    LOG_DEBUG("uid=="..type(uid)..",msg.uid="..type(msg.uid))
+    if tonumber(msg.uid) == tonumber(uid) then
         -- optional int32 uid = 1;
         -- optional int32 type = 2;
         -- optional int64 gold = 3;
@@ -543,7 +546,8 @@ function this.reqRefreshInfo(msg)
         -- optional string bankrealname = 19;
 
         --检测是否在游戏中
-        local gameid = 0
+        local gameid = 1000
+        local gametype = 0
         if gamenode and gameaddr then
             gameaddr = tonumber(gameaddr)
             luadump(player)
@@ -551,28 +555,28 @@ function this.reqRefreshInfo(msg)
             if ok and result then
                 LOG_DEBUG("需要断线重连:" .. uid .. ",gameid:" .. result)
                 join_game(gamenode, gameaddr, result)
-                gameid = result
+                gameid = math.floor( result/1000 ) 
+                gametype = math.floor( result%1000 )
             else
                 gameaddr = nil
                 gamenode = nil
             end
         end
 
-        if msg.type == 0 then --请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像
+        if msg.type == 1 then --请求刷新的类型，1所有信息，2金币 3绑定信息 4自定义签名 5等级和经验 6头像
             return "hall.resRefreshInfo", {
                 uid = uid,
-                type = 0,
-                nickname = userdata.nickname,
+                type = 1,
+                nickname = userdata.nickName,
                 gold = userdata.gold,
                 bank = userdata.bank,
                 level = userdata.level or 1,
                 vipexp = userdata.vipexp or 0,
                 sex = userdata.sex,
-                signature = userdata.signature or " ",
-                hongbao = userdata.hongbao or 0,
-                money = userdata.money or 0,
-                headimg = userdata.headimg or string.format( headimgurl,RAND_NUM(1,4000) ),
+                signature = userdata.signature or "",
+                headimg = userdata.headImg or string.format( headimgurl,RAND_NUM(1,4000) ),
                 gameid = gameid,
+                gametype = gametype,
                 charged = userdata.charged or 0
             }
         end
@@ -580,15 +584,14 @@ function this.reqRefreshInfo(msg)
         local data = load_userdata_mgr(msg.uid)
         if data then
             -- luadump(data)
-            local t = 1 + 32 + 128 + 64 + 4
             return "hall.resRefreshInfo", {
-                type = t,
+                type = 100,
                 gold = data.gold,
                 uid = msg.uid,
-                nickname = data.nickname,
+                nickname = data.nickName,
                 sex = data.sex,
-                usermsg = data.usermsg or "",
-                headimg = userdata.headimg or ""
+                signature = userdata.signature or "",
+                headimg = userdata.headImg or ""
             }
         else
             -- 用户不存在
@@ -631,13 +634,13 @@ end
 --快速加入
 function this.QuickJoinRequest(msg)
     if gamenode then
-        return "user.QuickJoinResonpse", {result = 100, gameid = 0, ismatch = -1}
+        return "user.QuickJoinResonpse", {result = 100, gameid = 1000, ismatch = -1}
     end
     if msg.code and msg.code ~= 0 then
         local node, addr, gid = call_manager("join_table", msg.code, player)
         if not addr then
             node = tonumber(node) or 101
-            return "user.QuickJoinResonpse", {result = node, gameid = 0, ismatch = -1}
+            return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = -1}
         end
         join_game(node, addr, gid)
         return
@@ -648,12 +651,12 @@ function this.QuickJoinRequest(msg)
         local node, addr = call_manager("create_table", msg.gameid, msg.pay, msg.score, msg.times, player, msg.params)
         if not addr then
             node = tonumber(node) or 101
-            return "user.QuickJoinResonpse", {result = node, gameid = 0, ismatch = -1}
+            return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = -1}
         end
         join_game(node, addr, msg.gameid)
         return
     else
-        return "user.QuickJoinResonpse", {result = 200, gameid = 0, ismatch = -1}
+        return "user.QuickJoinResonpse", {result = 200, gameid = 1000, ismatch = -1}
     end
 end
 
@@ -669,7 +672,7 @@ function this.QuickJoinGoldGameReq(msg)
     local node, addr = call_manager("quick_join", msg.gameid, player) --这个是调用usermanager里面的
     if not addr then
         node = tonumber(node) or 101
-        return "user.QuickJoinResonpse", {result = node, gameid = 0, ismatch = -1}
+        return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = -1}
     end
     join_game(node, addr, msg.gameid) --这个是用来记录日志和node和addr的
 end
@@ -685,7 +688,7 @@ function this.JoinMatch(msg)
     local node, addr = call_manager("join_match", msg.matchid, player)
     if not addr then
         node = tonumber(node) or 101
-        return "user.QuickJoinResonpse", {result = node, gameid = 0, ismatch = 1}
+        return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = 1}
     end
     join_game(node, addr, msg.matchid)
 end
@@ -730,7 +733,7 @@ function this.CheckReconnectReq()
         end
     end
 
-    return "user.CheckReconnectRep", {gameid = 0}
+    return "user.CheckReconnectRep", {gameid = 1000}
 end
 
 function this.GameListReq()

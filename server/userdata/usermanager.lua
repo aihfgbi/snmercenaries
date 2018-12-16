@@ -432,7 +432,7 @@ end
 
 
 function CMD.gate_heart(nodename)
-	LOG_DEBUG("register gate:"..nodename)
+	--LOG_DEBUG("register gate:"..nodename)
 	gate_list[nodename] = 0
 end
 

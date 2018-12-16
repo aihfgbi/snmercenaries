@@ -340,6 +340,7 @@ function CMD.start(conf)
     -- sharedata.new("proto_gm", {buffer})
 
     sharedata.new("cmd", "@" .. rootpath .. "protocol/cmd.lua")
+
     msgcmd = sharedata.query("cmd")
     conf.auth = skynet.self()
     skynet.call(gate, "lua", "open", conf)

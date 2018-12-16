@@ -1,31 +1,31 @@
 
-◊
+Í
 
 hall.protohall"
 reqLogin
-token (	"
+token (	"'
 resLogin
-result ("
+result (
+uid ("
 
 reqHeart"
 resHeart
 time ("+
 reqRefreshInfo
-uid (
-type ("Ã
+uid (
+type ("Ω
 resRefreshInfo
 uid (
 type (
-gold (
-bank (
+gold (
+bank (
 level (
 vipexp (
 sex (
 charged (
-gameid	 (
-roomid
+gameid	 (
+gametype
  (
-tableid (
 headimg (	
 nickname (	
 	signature (	
@@ -91,7 +91,7 @@ resMailNew
 reqExchangeGold
 gold ("!
 resExchangeGold
-result (*Æ
+result (*√
 MsgType
 REQ_CONNECTëN
 RES_CONNECT°ú
@@ -118,4 +118,5 @@ resMailNew
 REQ_MAIL_NEWúN
 RES_MAIL_NEW¨ú
 REQ_EXCHANGE_GOLDùN
-RES_EXCHANGE_GOLD≠ú
+RES_EXCHANGE_GOLD≠ú
+RES_KICK_USERØÍ

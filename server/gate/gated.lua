@@ -25,10 +25,8 @@ function handler.message(fd, msg, sz)
     local c = connection[fd]
     local agent = c.agent
     if agent then
-        LOG_DEBUG("11111")
         skynet.redirect(agent, 0, "client", 1, msg, sz)
     else
-        LOG_DEBUG("22222")
         skynet.send(watchdog, "lua", "socket", "auth", fd, sz, netpack.tostring(msg, sz))
     end
 end
