@@ -33,6 +33,10 @@ enum MsgType {
 	REQ_EXCHANGE_GOLD = 10013;//金币兑换
 	RES_EXCHANGE_GOLD = 20013;//金币兑换返回
 
+	REQ_CREATE_GAME = 10014;//請求創建房間
+	REQ_QUICK_JOIN_GAME = 10015;//快速加入房间
+	RES_QUICK_JOIN_GAME = 20015;//加入房间返回
+
 	// 0 客户端发起的socke关闭, reason = 1 被挤下线, reason = 2 解码失败， reason = 3 超时 , reason = 4 被锁定 5 数据包太大了  6 被封号
 	// 7 意外错误，有玩家在线，但是再次请求了开启一个userdata服务，处理方式是将之前的一个agent踢掉(被挤号)
 	// 8 找不到game服
@@ -102,21 +106,24 @@ message resRefreshInfo {
 message reqGameList {
 }
 
-//房间属性
-message room {
-	optional int32 roomid = 1;//房间id
+//游戏模式
+message model {
+	optional int32 modelid = 1;//模式id
 	optional int32 basescore = 2;//底分，单位：分
-	optional int32 goldlimit = 3;//入场限制，单位：分
-	optional string roomname = 4;//房间名字，初级场，中级场等
+	optional int32 entranceBound = 3;//入场下限限制，单位：分
+	optional int32 entranceLimit = 4;//入场上限限制，单位：分
+	optional string modelname = 5;//模式名字，初级场，中级场等
 }
 
 //游戏属性
 message game {
-	optional int32 gameid = 1;//游戏id 麻将=1
-	optional int32 isopen = 2;//是否开启
-	optional string version = 3;//版本号
-	optional string gamename = 4;//游戏名字
-	repeated room roomlist = 5;//房间列表
+	optional bool isopen = 1;//是否开启
+	optional int32 gameid = 2;//游戏id 麻将=1
+	optional int32 gamestatus = 3;//游戏状态 1火热
+	optional string packagename = 4;//包名
+	optional string version = 5;//版本号
+	optional string gamename = 6;//游戏名字
+	repeated model modellist = 7;//模式列表
 }
 
 //RES_GAME_LIST = 20006;//游戏列表返回
@@ -128,7 +135,7 @@ message resGameList {
 
 //REQ_BANK_INFO = 10007;//请求银行数据
 message reqBankInfo {
-	optional string pwd = 1 [default = "0"];//密码默认传0
+	optional string pwd = 1;//密码默认传0
 }
 
 //RES_BANK_INFO = 20007;//请求银行数据
@@ -140,7 +147,7 @@ message resBankInfo {
 message reqBankAccess {
 	optional int32 type = 1; //类型 1存钱 2取钱
 	optional int64 gold = 2; //存取金额，
-	optional string pwd = 3 [default = "0"];//密码默认传0
+	optional string pwd = 3;//密码默认传0
 }
 
 //RES_BANK_ACCESS = 20008;//存钱返回
@@ -215,23 +222,26 @@ message resExchangeGold {
 	optional int32 result = 1; //1成功 2身上钱不够 3超过单次提现限额 4超过每日提现限额 5超过每日提现次数 6请求连接失败
 }
 
-//快速加入开房模式
-message QuickJoinRequest {
-	optional int32 roomid = 1;
-	optional int32 gameid = 2;
-	optional int32 gametype = 3
-	optional int32 pay = 4;
-	optional int32 score = 5;
-	optional int32 times = 6;
-	repeated int32 params = 7;
+//创建房间
+message reqCreateGame {
+	optional int32 gameid = 1;//游戏id
+	optional int32 modelid = 2;//模式ID
+	optional int32 pay = 3;//支付方式
+	optional int32 score = 4;//底分
+	optional int32 times = 5;//局数
+	repeated int32 params = 6;//其他参数
 }
 
-message QuickJoinGoldGameReq {
-	required int32 gameid = 1;
+//快速加入游戏
+message reqQuickJoinGame {
+	optional int32 roomid = 1;//房间号，如果是加入房间就只传这个，匹配模式只传下面2个
+	required int32 gameid = 2;
+	required int32 modelid = 3;//模式ID
 }
 
-message QuickJoinResonpse {
-	required int32 result = 1; //0成功，1失败
+//加入房间和创建房间返回
+message resQuickJoinGame {
+	required int32 result = 1; //1成功，2失败, 3已經在遊戲中
 	required int32 gameid = 2; //进入的游戏ID(如果是比赛，则表示比赛的id)
-	required int32 ismatch = 3; //是否是比赛
+	required bool ismatch = 3; //是否是比赛
 }

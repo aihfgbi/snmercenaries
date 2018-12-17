@@ -1,5 +1,5 @@
 
-ê
+ð
 
 hall.protohall"
 reqLogin
@@ -34,30 +34,33 @@ hall.protohall"
 alipayrealname (	
 bankacc (	
 bankrealname (	"
-reqGameList"N
-room
-roomid (
-	basescore (
-	goldlimit (
-roomname (	"g
+reqGameList"l
+model
+modelid (
+	basescore (
+entranceBound (
+entranceLimit (
+	modelname (	"’
 game
-gameid (
-isopen (
-version (	
-gamename (	
-roomlist (2
-.hall.room"+
+isopen (
+gameid (
+
+gamestatus (
+packagename (	
+version (	
+gamename (	
+	modellist (2.hall.model"+
 resGameList
 gamelist (2
-.hall.game"
-reqBankInfo
-pwd (	:0"
+.hall.game"
+reqBankInfo
+pwd (	"
 resBankInfo
-bank (";
+bank ("8
 reqBankAccess
 type (
-gold (
-pwd (	:0"-
+gold (
+pwd (	"-
 resBankAccess
 result (
 bank ("<
@@ -91,7 +94,22 @@ resMailNew
 reqExchangeGold
 gold ("!
 resExchangeGold
-result (*Ã
+result ("k
+reqCreateGame
+gameid (
+modelid (
+pay (
+score (
+times (
+params ("C
+reqQuickJoinGame
+roomid (
+gameid (
+modelid ("C
+resQuickJoinGame
+result (
+gameid (
+ismatch (*Ž
 MsgType
 REQ_CONNECT‘N
 RES_CONNECT¡œ
@@ -118,5 +136,8 @@ resMailNew
 REQ_MAIL_NEWœN
 RES_MAIL_NEW¬œ
 REQ_EXCHANGE_GOLDN
-RES_EXCHANGE_GOLD­œ
+RES_EXCHANGE_GOLD­œ
+REQ_CREATE_GAMEžN
+REQ_QUICK_JOIN_GAMEŸN
+RES_QUICK_JOIN_GAME¯œ
 RES_KICK_USER¯ê

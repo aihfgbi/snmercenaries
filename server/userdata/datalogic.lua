@@ -579,6 +579,16 @@ function this.reqRefreshInfo(msg)
                 gametype = gametype,
                 charged = userdata.charged or 0
             }
+        elseif msg.type then
+            local strlist = {
+                "gold",--gold bank
+                "bind",--phone alipayacc alipayrealname bankacc bankrealname
+                "signature",--signature
+                "level",--level vipexp
+                "headimg",--headimg
+                "charged" --charged
+            }
+            update_client_info(msg.type) --更新用户部分信息
         end
     elseif msg.uid then--查其他人的信息
         local data = load_userdata_mgr(msg.uid)
@@ -598,6 +608,16 @@ function this.reqRefreshInfo(msg)
             return "hall.resRefreshInfo", {type = 1, uid = msg.uid, nickname = "unknow"}
         end
     end
+end
+
+--[[
+    @desc: 请求游戏列表
+    author:{author}
+    time:2018-12-17 21:59:03
+    @return:
+]]
+function this.reqGameList()
+    LOG_DEBUG("收到了请求游戏列表")
 end
 
 -- 0成功
@@ -661,12 +681,12 @@ function this.QuickJoinRequest(msg)
 end
 
 --快速加入金币游戏
-function this.QuickJoinGoldGameReq(msg)
-    if not msg or not msg.gameid then
+function this.reqQuickJoinGoldGame(msg)
+    if not msg or not msg.gameid or not msg.modelid then
         return
     end
     if gamenode then
-        return "user.QuickJoinResonpse", {result = 100, gameid = msg.gameid, ismatch = -1}
+        return "hall.resQuickJoinGame", {result = 2, gameid = msg.gameid, ismatch = -1}
     end
     -- quick_join(gameid, player)
     local node, addr = call_manager("quick_join", msg.gameid, player) --这个是调用usermanager里面的
