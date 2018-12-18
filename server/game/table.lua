@@ -246,7 +246,7 @@ function CMD.join(p)
 		-- end
 
 		-- 给客户端发送加入成功的协议
-		p:send_msg("user.QuickJoinResonpse", {result=0,gameid=gameid,ismatch=ismatch or -1})
+		p:send_msg("user.QuickJoinResonpse", {result=1,gameid=gameid,ismatch=ismatch or -1})
 
 		local msg = logic.get_tableinfo(p)
 		if msg then p:send_msg("game.TableInfo", msg) end

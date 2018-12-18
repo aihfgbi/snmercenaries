@@ -651,50 +651,53 @@ function this.ModifyUserInfoReq(msg)
     return "user.ModifyUserInfoRep", {result = 1002}
 end
 
---快速加入
-function this.QuickJoinRequest(msg)
+--创建房间
+function this.reqCreateGame(msg)
     if gamenode then
-        return "user.QuickJoinResonpse", {result = 100, gameid = 1000, ismatch = -1}
+        return "hall.resQuickJoinGame", {result = 3, gameid = 1000, ismatch = -1}
     end
-    if msg.code and msg.code ~= 0 then
-        local node, addr, gid = call_manager("join_table", msg.code, player)
+    if msg.gameid and msg.gameid ~= 1000 and msg.modelid and msg.modelid ~= 0 then
+        local gameid = msg.gameid * 1000 + msg.modelid --获得真正的游戏id
+        local node, addr = call_manager("create_table", gameid, msg.pay, msg.score, msg.times, player, msg.params)
         if not addr then
             node = tonumber(node) or 101
-            return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = -1}
+            return "hall.resQuickJoinGame", {result = node, gameid = 1000, ismatch = -1}
         end
-        join_game(node, addr, gid)
-        return
-    elseif
-        msg.gameid and msg.gameid ~= 0 and msg.pay and msg.pay ~= 0 and msg.score and msg.score ~= 0 and msg.times and
-            msg.times ~= 0
-     then
-        local node, addr = call_manager("create_table", msg.gameid, msg.pay, msg.score, msg.times, player, msg.params)
-        if not addr then
-            node = tonumber(node) or 101
-            return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = -1}
-        end
-        join_game(node, addr, msg.gameid)
+        join_game(node, addr, gameid)
         return
     else
-        return "user.QuickJoinResonpse", {result = 200, gameid = 1000, ismatch = -1}
+        return "hall.resQuickJoinGame", {result = 2, gameid = 1000, ismatch = -1}
     end
 end
 
---快速加入金币游戏
-function this.reqQuickJoinGoldGame(msg)
-    if not msg or not msg.gameid or not msg.modelid then
+--快速加入游戏
+function this.reqQuickJoinGame(msg)
+    if not msg then
         return
     end
+    LOG_DEBUG("收到了加入游戏的请求")
+    luadump(msg,"=======")
     if gamenode then
-        return "hall.resQuickJoinGame", {result = 2, gameid = msg.gameid, ismatch = -1}
+        return "hall.resQuickJoinGame", {result = 3, gameid = 1000, ismatch = -1}
     end
-    -- quick_join(gameid, player)
-    local node, addr = call_manager("quick_join", msg.gameid, player) --这个是调用usermanager里面的
-    if not addr then
-        node = tonumber(node) or 101
-        return "user.QuickJoinResonpse", {result = node, gameid = 1000, ismatch = -1}
+    --有房间号表示加入房间
+    if msg.roomid then
+        local node, addr, gid = call_manager("join_table", msg.roomid, player)--
+        if not addr then
+            node = tonumber(node) or 101
+            return "hall.resQuickJoinGame", {result = node, gameid = 1000, ismatch = -1}
+        end
+        join_game(node, addr, gid)
+    elseif msg.gameid and msg.modelid and msg.gameid ~= 1000 then --加入金币游戏匹配场
+        -- quick_join(gameid, player)
+        local gameid = msg.gameid * 1000 + msg.modelid
+        local node, addr = call_manager("quick_join", gameid, player) --这个是调用usermanager里面的
+        if not addr then
+            node = tonumber(node) or 101
+            return "hall.resQuickJoinGame", {result = node, gameid = 1000, ismatch = -1}
+        end
+        join_game(node, addr, gameid) --这个是用来记录日志和node和addr的
     end
-    join_game(node, addr, msg.gameid) --这个是用来记录日志和node和addr的
 end
 
 --加入比赛
