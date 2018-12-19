@@ -24,3 +24,9 @@ GAMEID
     }
 
 }
+
+麻将 
+gameid =1 
+modelid = 1 开房模式
+modelid = 101 初级场   102 中级场  103 高级场
+modelid = 201 体验场

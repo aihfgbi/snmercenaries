@@ -71,9 +71,8 @@ local function join_game(node, addr, gid)
     log(
         "join_game",
         string.format(
-            '{"gold":%d,"money":%d,"gameid":%d,"node":"%s","addr":"%s"}',
+            '{"gold":%d,"gameid":%d,"node":"%s","addr":"%s"}',
             userdata.gold or 0,
-            userdata.money or 0,
             gid or 0,
             node or "nil",
             addr or "nil"
@@ -91,17 +90,15 @@ local function join_game(node, addr, gid)
             "user_map",
             uid,
             string.format(
-                '{"uid":%d,"gold":%d,"money":%d,"bank":"%s","charged":"%s","hongbao":"%s","channel":0,"gameid":%d,"onlinetime":"%s","jointime":"%s","nickname":"%s"}',
+                '{"uid":%d,"gold":%d,"bank":"%s","charged":"%s","channel":0,"gameid":%d,"onlinetime":"%s","jointime":"%s","nickname":"%s"}',
                 uid,
                 userdata.gold,
-                userdata.money,
                 userdata.bank,
                 userdata.charged,
-                userdata.hongbao,
                 gid,
                 onlinetime or 0,
                 os.date("%Y-%m-%d %X"),
-                userdata.nickname
+                userdata.nickName
             )
         )
     end
@@ -380,9 +377,8 @@ function this.BuyHongbaoReq(msg)
     log(
         "exchange_hongbao",
         string.format(
-            '{"gold":%d,"money":%d,"id":%d,"cost":%d,"wincount":%d,"hongbao":"%s"}',
+            '{"gold":%d,"id":%d,"cost":%d,"wincount":%d,"hongbao":"%s"}',
             userdata.gold or 0,
-            userdata.money or 0,
             msg.id,
             cfg.cost,
             userdata.wincount,
@@ -1349,7 +1345,7 @@ function CMD.leave_game()
 
     log(
         "leave_game",
-        string.format('{"gold":%d,"money":%d,"gameid":%d}', userdata.gold or 0, userdata.money or 0, player.gameid or 0)
+        string.format('{"gold":%d,"gameid":%d}', userdata.gold or 0, player.gameid or 0)
     )
 
     if online and not userdata.gm then
@@ -1362,17 +1358,15 @@ function CMD.leave_game()
             "user_map",
             uid,
             string.format(
-                '{"uid":%d,"gold":%d,"money":%d,"bank":"%s","charged":"%s","hongbao":"%s","channel":0,"gameid":%d,"onlinetime":"%s","jointime":"%s","nickname":"%s"}',
+                '{"uid":%d,"gold":%d,"bank":"%s","charged":"%s","channel":0,"gameid":%d,"onlinetime":"%s","jointime":"%s","nickname":"%s"}',
                 uid,
                 userdata.gold,
-                userdata.money,
                 userdata.bank,
                 userdata.charged,
-                userdata.hongbao,
                 0,
                 onlinetime or 0,
                 "",
-                userdata.nickname
+                userdata.nickName
             )
         )
     end

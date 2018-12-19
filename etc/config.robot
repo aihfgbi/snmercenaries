@@ -16,6 +16,6 @@ lua_path = lua_path .. "./server/robot/?.lua;"..
 snax = lua_path
 
 -- 后台模式
---daemon = root.."pid/"..nodename..".pid"
+daemon = root.."pid/"..nodename..".pid"
 
---logger = root.."h5gamelog/"..nodename..".log"
+logger = root.."h5gamelog/"..nodename..".log"

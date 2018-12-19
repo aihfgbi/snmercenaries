@@ -51,5 +51,12 @@ local CMD = {
 	["10013"] = "hall.reqExchangeGold",
     ["hall.resExchangeGold"] = 20013, --金币兑换返回
 	["20013"] = "hall.resExchangeGold",
+
+	["hall.reqCreateGame"] = 10014, --請求創建房間
+	["10014"] = "hall.reqCreateGame",
+	["hall.reqQuickJoinGame"] = 10015, --快速加入房间
+	["10015"] = "hall.reqQuickJoinGame",
+	["hall.resQuickJoinGame"] = 20015, --加入房间返回
+	["20015"] = "hall.resQuickJoinGame",
 }
 return CMD
