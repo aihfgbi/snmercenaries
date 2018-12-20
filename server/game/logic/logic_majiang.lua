@@ -3291,6 +3291,7 @@ function mj_logic.update(p)
         kick_all_player()
         return 
     end
+    LOG_DEBUG("mj_logic.update")
     if not _game_status then return end
 
     if _end_time and osapi.os_time() > _end_time and not _has_start then

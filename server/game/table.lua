@@ -273,7 +273,7 @@ function CMD.dispatch(uid, name, msg)
 				api.send_to_all("game.ChatNtf", {type=msg.type,to=0,msg=msg.msg,uid=uid})
 			end
 		elseif msg.type == 3 then
-			local expression_cfg = require "special_expression_conf"
+			local expression_cfg = require "special_expression_conf" --发消息需要的花费
 
 			local msgid = tonumber(msg.msg)
 			if msgid and expression_cfg[msgid] and expression_cfg[msgid].cost then

@@ -1,9 +1,5 @@
 package game;
 
-enum MsgType {
-
-}
-
 message TableInfo {
     message player {
         required int32 uid = 1; //用户uid
@@ -14,6 +10,7 @@ message TableInfo {
         optional int32 ready = 6; //是否已经准备，1准备，0为准备
         optional int32 score = 7; //当前分值
         optional sint64 gold = 8; //金币
+        optional int32 money = 9; //红包
         optional int32 trusteeship = 10; //是否托管1托管
         optional string headimg = 11; //用户头像的URL
         repeated int32 params = 12; //不同游戏的额外用户数据

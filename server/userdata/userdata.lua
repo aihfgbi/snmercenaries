@@ -562,7 +562,7 @@ function CMD.offline_use(uid)
 			agaddr = agaddr,
 			datnode = _nodename,
 			dataddr = skynet.self(),
-			nickname = _userdata.nickname,
+			nickname = _userdata.nickName,
 			headimg = _userdata.headimg
 		},
 		_redis
