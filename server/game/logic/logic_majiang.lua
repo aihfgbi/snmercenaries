@@ -3231,7 +3231,7 @@ function mj_logic.leave_game(p)
         end
     end
     
-    return false	
+    return false
 end
 
 function mj_logic.get_tableinfo(p)

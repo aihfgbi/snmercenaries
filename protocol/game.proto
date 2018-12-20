@@ -1,10 +1,21 @@
 package game;
-
+//60001-69999为请求   70001-79999为返回
 enum MsgType {
+    RES_TABLE_INFO = 70001;//发送桌子信息
+    RES_ENTER_TABLE = 70002;//广播加入桌子
+    REQ_LEAVE_TABLE = 60003;//离开桌子请求
+    RES_LEAVE_TABLE = 70003;//离开桌子返回，成功会广播
+    REQ_SIT_DOWN = 60004;//请求坐下
+    RES_SIT_DOWN = 70004;//请求坐下返回
+    REQ_RESUME = 60005;//请求重连信息
+    RES_RESUME_MJ = 70005;//麻将重连信息
+
+    REQ_CHAT = 60030;//聊天
+    RES_CHAT = 70030;//聊天
 
 }
 
-message TableInfo {
+message resTableInfo {
     message player {
         required int32 uid = 1; //用户uid
         required string nickname = 2; //用户昵称
@@ -26,14 +37,25 @@ message TableInfo {
     required int32 playedtimes = 5; //已经进行的局数
     required int32 score = 6; //低分
     required int32 paytype = 7; //1表示AA，2表示房主付费
-    required int32 code = 8; //房间号
+    required int32 roomid = 8; //房间号
     required int32 isGoldGame = 9; //是否是金币模式0表示开房模式，1表示金币模式
     repeated player players = 10; //玩家列表
     repeated int32 extradata = 11; //不同游戏的额外数据
 }
 
+message reqLeaveTable {
+}
 
-message SitdownNtf {
+message resLeaveTable {
+    required int32 uid = 1;
+    optional int32 result = 2; //如果有值，1000表示离开房间失败，1001表示房间由于没人而解散，1002表示游戏正常结束了
+}
+
+message reqSitDown {
+    required int32 seatid = 1;//-1表示站起來
+}
+
+message resSitDown {
     required int32 uid = 1;
     required int32 seatid = 2;
     optional string nickname = 3;
@@ -49,90 +71,11 @@ message GameStart {
     optional int32 endtime = 1;
 }
 
-message AskMaster {
-    required int32 time = 1;
-    optional int32 seatid = 2;
-    optional int32 opt = 3; //(斗地主：1叫地主2抢地主)
-}
-
-message GetMaster {
-    required int32 result = 1; //1表示叫庄，0表示不叫(斗地主：0不抢1抢地主/0不叫1叫地主)
-    required int32 uid = 2;
-}
-
-message SetMaster {
-    required int32 uid = 1;
-    optional int32 score = 2;
-}
-
-message AskRate {
-    required int32 time = 1;
-    optional int32 master = 2;
-    optional int32 seatid = 3;
-    optional int32 opt = 4; //(最低分：0不叫1一分2二分3三分)
-}
-
-message SetRate {
-    required int32 rate = 1; //(斗地主：0不叫1一分2二分3三分)
-    required int32 uid = 2;
-}
-
-message AddCard {
-    required int32 uid = 1;
-    required int32 seatid = 2;
-    required int32 count = 3;
-    repeated int32 cards = 4;
-}
-
-message ShowCard {
-    required int32 uid = 1;
-    required int32 seatid = 2;
-    repeated int32 cards = 3;
-}
-
-message GameResult {
-    required int32 master = 1;
-    required int32 count = 2;
-    repeated int32 infos = 3; //{uid,cur_socre,score,uid,cur_socre,socre,uid,cur_socre,socre....}
-    repeated int32 cards = 4; //{cardid,cardid,cardid....}
-    optional int32 spring = 5;    //1表示春天或反春天
-}
-
-message GameEnd {
-    message info {
-        required int32 tongsha = 1; //通杀
-        required int32 tongpei = 2; //通赔
-        required int32 niuniu = 3; //牛牛
-        required int32 wuniu = 4; //无牛
-        required int32 shengli = 5; //胜利
-        required int32 score = 6; //输赢分值
-        required int32 uid = 7;
-        required string nickname = 8;
-    }
-
-
-    required int32 round = 1; //总局数
-    repeated info infos = 2;
-}
-
-message LeaveTableNtf {
-    required int32 uid = 1;
-    optional int32 result = 2; //如果有值，1000表示离开房间失败，1001表示房间由于没人而解散，1002表示游戏正常结束了
-}
-
 message UserOffline {
     required int32 uid = 1;
 }
 
 message UserOnline {
-    required int32 uid = 1;
-}
-
-message AskConfirmCards {
-    required int32 time = 1;
-}
-
-message ConfirmCards {
     required int32 uid = 1;
 }
 
@@ -146,18 +89,6 @@ message ChatNtf {
 message StartRound {
     required int32 round = 1;
     required int32 total = 2;
-}
-
-message NiuNiuHistroy {
-    message histroy {
-        required int32 master = 1; //庄的UID
-        required int32 count = 2; //玩家人数
-        required int32 round = 3; //当前局数
-        repeated int32 infos = 4; //{uid,cur_socre,score,uid,cur_socre,socre,uid,cur_socre,socre....}
-        repeated int32 cards = 5; //{cardid,cardid,cardid....}
-    }
-
-    repeated histroy list = 1;
 }
 
 message EnterTable {
@@ -178,129 +109,8 @@ message GmChangeCards {
     required int32 uid = 2;
 }
 
-message NiuNiuResume {
-    message playercard {
-        required int32 uid = 1;
-        required int32 count = 2;
-        repeated int32 cards = 3;
-    }
-    required int32 status = 1; //当前状态
-    required int32 time = 2; //当前状态剩余时间
-    repeated playercard info = 3; //玩家的卡牌
-    optional int32 masteruid = 4; //庄家uid
-}
-
-//表情发送失败返回
-message ChatNtfResult {
-    required int32 result = 1; //1扣款失败
-}
-
 //断线重连需要恢复现场的时候发
 message Resume {
-}
-
-
-message AskPlayCard {
-    required int32 seatid = 1;
-    required int32 time = 2;
-    required int32 cardtype = 3;
-    repeated int32 cards = 4;
-    repeated int32 avatarCards = 5;
-}
-
-message PlayCard {
-    required int32 uid = 1;
-    repeated int32 cards = 2;
-    repeated int32 avatarCards = 3;
-    optional int32 cardtype = 4;
-}
-
-message AddFish {
-    message FishInfo {
-        required int32 type = 1; //需要生成的鱼的类型,填0表示生成一个鱼父级
-        required int32 id = 2; //鱼的ID
-        required int32 delay = 3; //多少秒后创建
-        optional int32 parent = 4; //属于哪个parent，不填则为独立的鱼
-        optional int32 time = 5; //如果填写，那么表示该鱼/父级的存在时间
-        optional int32 pathOperation = 6; //需要对路径进行的运算操作,1=+，2=-，3=*，4=/
-        repeated int32 path = 7; //鱼的路径，如果不存在路径则不填
-        repeated int32 pos = 8; //鱼的初始位置，不存在不填
-        repeated int32 rot = 9; //出的初始姿态，不存在不填
-        repeated int32 pathParams = 10; //一个vector3参数，调整path的每个坐标值
-        optional sint64 addtime = 11; //添加的时间
-    }
-
-    repeated FishInfo fishes = 2;
-}
-
-//斗地主牌局结束协议
-message GameLandlordEnd {
-    message info {
-        required int32 uid = 1;
-        required string nickname = 2;
-        required int32 wincount = 3; //胜利局数
-        required int32 losecount = 4; //输局数
-        required int32 totalscore = 5; //输赢总分值
-        required int32 maxscore = 6; //单局赢最高分
-        required int32 bombcount = 7; //单局赢最高分 -> 炸弹数量
-        required int32 springcount = 8; //春天总次数
-        required int32 mastercount = 9; //地主总次数
-    }
-    required int32 round = 1; //总局数
-    repeated info infos = 2;
-}
-
-//三人斗地主断线重连
-message GameLandResume {
-    message playercard {
-        required int32 uid = 1;
-        required int32 count = 2;
-        repeated int32 cards = 3;
-    }
-    message playedcard {
-        required int32 uid = 1;
-        repeated int32 cards = 2;
-        repeated int32 avatarCards = 3; //变牌
-        optional int32 cardtype = 4; //出牌类型
-    }
-    message playerrate {
-        required int32 uid = 1;
-        required int32 score = 2; //是否抢了地主(0,1) 或 叫分
-    }
-    required int32 status = 1; //当前状态
-    required int32 time = 2; //当前状态剩余时间
-    required int32 curruid = 3; //当前操作人
-    repeated playercard pcards = 4; //玩家的手中卡牌
-    repeated playedcard ucards = 5; //出的最大牌
-    repeated playerrate rate = 6; //叫分
-    repeated int32 mastercards = 7;    //三张底牌
-}
-
-message Shoot {
-    required int32 type = 1; //子弹类别（炮台ID）
-    required int32 id = 2; //子弹的ID
-    required int32 base = 3; //子弹的倍率
-    optional sint64 gold = 4; //玩家射出这发子弹之后的钱
-    optional int32 uid = 5; //子弹拥有者
-    repeated int32 params = 6; //子弹参数，用于客户端计算
-}
-
-message FishDie {
-    required int32 id = 1;
-    required int32 uid = 2;
-    required int32 fishgold = 3;
-    required sint64 gold = 4;
-    optional int32 score = 5;
-    repeated int32 droplist = 6;
-    repeated int32 params = 7;
-}
-
-message Hit {
-    //如果服务器返还这次射击，那么表示这条鱼不存在
-    required int32 id = 1; //鱼ID
-    required int32 shootid = 2; //子弹的id
-    optional int32 result = 3; //如果result为1表示这次设计成功，2表示射击失败，鱼不存在
-    optional sint64 gold = 4;
 }
 
 //百人游戏恢复房间
@@ -484,15 +294,6 @@ message MJGameEnd {
 
 //***************************** 以上是麻将协议 ***********************//
 
-//斗地主重新开始下一局游戏
-message StartNextGame {
-}
-//斗地主托管
-message LandTrusteeship {
-    required int32 uid = 1;
-    required int32 state = 2; //1表示托管，0取消托管
-}
-
 //解散房间
 message DissolveTable{
     required int32 opt = 1;   //1解散 2同意 3拒绝
@@ -503,133 +304,6 @@ message PushDissolveTable{
     repeated int32 consentUid = 2;
     repeated int32 refuseUid = 3;
     optional int32 remaintime = 4;
-}
-
-message PourJXLW{
-    required int32 pournumber=1;
-    required int32 pourmoney=2;
-}
-
-message GameOverJXLW{
-    message WinMessage {
-        repeated int32 winType=1;
-        repeated int32 winNumber=2;
-        repeated int32 winGold=3;
-    }
-    required int32 totalWin=1;
-    optional WinMessage winmessage=2;
-    required int32 ownergold=3;
-}
-
-
-
-message ResumeJXLW{
-    message WinMessage {
-        repeated int32 winType=1;
-        repeated int32 winNumber=2;
-        required int32 winGold=3;
-        required int32 winTotal=4;
-    }
-
-    message PourMessage{
-        required int32 pournumber=1;
-        required int32 pourmoney=2;
-        required int32 winTotal=3;
-    }
-
-    required int32 state=1;
-    optional WinMessage winmessage=2;
-    optional PourMessage pourmessage=3;
-    required int32 ownergold=4;
-}
-
-message LeaveGameJXLW{
-    optional int32 leavestate=1;
-}
-
-
-message RandomJXLW{
-    message RandomResult{
-        repeated int32 randomL=1;
-    }
-    repeated RandomResult randomH=1;
-}
-
-message PourFQZS{
-
-    required int32 pourobject=1;
-    required int32 pourmoney=2;
-}
-
-message ResultFQZS{
-    message WinnerSort{
-       required int32 uid=1;
-       required string username=2;
-       required int32 win=3;
-    }
-    repeated int32 Result=1;
-    required int32 Type=2;
-    repeated WinnerSort tSort=3;
-    required string nickname = 4;
-    required int32 bankerpay = 5;
-}
-
-message LeaveGameFQZS{
-
-}
-
-message ResumeFQZS{
-    message PourMessage{
-        repeated int32 PourGold=1;
-    }
-    message WinnerSort{
-       required int32 uid=1;
-       required string username=2;
-       required int32 win=3;
-    }
-    required int32 status=1;
-    optional PourMessage pourmessage=2;
-    repeated int32 Result=3;
-    repeated WinnerSort tSort=4;
-    required string nickname = 5;
-    required int32 bankerpay = 6;
-    required int32 WinGold = 7;
-    required int32 BetNot = 8;
-}
-
-
-message GameStartSLYZ{
-    required int32 pourgold=1;
-}
-
-message CardSLYZ{
-    message CardH{
-        repeated int32 card=1;
-    }
-    repeated CardH cardH=1;
-}
-
-message ResultSLYZ{
-    message CardType{
-        repeated int32 cardtype=1;
-    }
-    message CardRate{
-        repeated int32 cardrate=1;
-    }
-    required CardType cardType=1;
-    required CardRate cardRate=2;
-    required int32  winGold=3;
-    required int32  ownerGold=4;
-}
-
-message AutoSLYZ{
-    required int32 status=1;
-    required int32 pourgold=2;
-}
-
-message ResumeSLYZ{
-    required int32 status=1;
-    required int32 pourgold=2;
 }
 
 message MJGameStop {
@@ -678,49 +352,15 @@ message MJResume {
 message GoldPool{
     required int32 goldpool=1;
 }
-message HistoryMessageSLYZ{
-    required int32 uid=1;
-    repeated int32 type=2;
-}
 
 message FishChangeBase {
     required int32 uid = 1;
     required int32 base = 2;
 }
 
-message WinGoldFQZS {
-    required int32 WinGold = 1;
-    required int32 BetNot = 2;
-    }
 
 message ChangeGroud{
     required int32 desktop = 1;
-}
-
-message UpDownMasterFQZS{
-    optional int32 opt=1;
-    optional string mastername=2;
-    optional int32 waitnumber=3;
-    optional int32 gold=4;
-    optional int32 lianzhuangshu=5;
-    optional int32 uid=6;
-}
-
-message ContinuedFQZS{
-    message continued {
-        required int32 pourobject=1;
-        required int32 pourmoney=2;
-    }
-
-    repeated continued continueds = 1;
-}
-
-message RandomResultJXLW{
-    required int32 randomresult = 1;
-}
-
-message HistoryFQZS{
-    repeated int32 history=1;
 }
 
 //百人游戏玩家列表
@@ -761,35 +401,6 @@ message UpdateGoldInGame {
     required int32 gold = 3; //变化后剩余的金币量
 }
 
-//鱼阵即将开始
-message FishFormWillStart {
-    
-}
-
-//玩家说话
-message UserSpeakNtf {
-    required int32 uid = 1;
-    required string voiceid = 2;
-}
-
-message PourCSD{
-    optional sint64 pourmoney = 1;
-}
-
-message GameResultCSD{
-    repeated int32 showcards = 1;
-    repeated int32 wintype = 2;
-    repeated int32 winnumber = 3;
-    repeated int32 winorder = 4;
-    repeated sint64 wingold = 5;
-    optional int32 randomtime = 6;
-    required sint64 wintotal = 7;
-    required sint64 owngold = 8;
-    repeated int32 imagechange = 9;
-    optional sint64 winbig = 10;
-    optional sint64 winsmall = 11;
-}
-
 message CompareScore{
     optional int32 times1 = 1;//比倍类型1：半倍，2：比倍
     optional int32 times2 = 2;//次数
@@ -802,264 +413,6 @@ message CompareScoreResult{
     optional sint64 owngold = 4;
 }
 
-//森林舞会断线重连
-message ResumeSLWH{
-    message PourMessage{
-        repeated int32 pourGold=1;
-    }
-
-    required int32 status=1; //现阶段
-    optional PourMessage pourmessage=2; //押注金额
-    repeated int32 result=3; //落点
-    required int32 huode=4; 
-    required int32 xiazhu=5;
-}
-
-//森林舞会押注
-message PourSLWH{
-    required int32 pourobject=1; // 押注类型
-    required int32 pourmoney=2; // 押注金额
-    optional int32 type=3; // 押注成功与否（1是成功，2是钱不够，3是押多了）
-}
-
-//森林舞会落点
-message ResultSLWH{
-    required int32 type=1;
-    repeated int32 result=2;
-    required int32 huode=3;
-    required int32 xiazhu=4;
-}
-
-//森林舞会每秒信息
-message SecondSLWH{
-    repeated int32 bets = 1; //总下注
-}
-
-//森林舞会续投
-message ContinuedSLWH{
-    message continued {
-        required int32 pourobject=1;
-        required int32 pourmoney=2;
-    }
-
-    repeated continued continueds = 1;
-    optional int32 type = 2; // 1.成功 2.已经续投过 3.上把没有押注 4.钱不够
-}
-
-//森林舞会取消
-message CancelSLWH{
-    optional int32 type = 1;
-}
-
-//森林舞会押注倍率
-message BetRateSLWH{
-    repeated int32 rates = 1; //押注倍率
-    repeated int32 color = 2; //颜色位置
-}
-
-//森林舞会阶段
-message StatusSLWH{
-    required int32 status = 1; //阶段
-    required int32 time = 2; //阶段剩余时间
-}
-
-//森林舞会记录
-message HistorySLWH{
-    message history {
-        required int32 type=1;
-        repeated int32 result=2;
-    }
-
-    repeated history History = 1;
-}
-
 //麻将开局动画播完开始发牌
 message MJRequestDealTiles{
-}
-
-//彩金改变下发
-message CaiJinChangeNtf {
-    optional sint64 biggold = 1;
-    optional sint64 smallgold = 2;
-}
-
-//用于显示数据的假信息  包括昵称 头像和金币数量
-message ShowMessage{        
-    message Robot{
-        optional string nickname = 1;
-        optional string headimg = 2;
-        optional sint64 gold = 3;
-        optional sint64 addgold = 4;
-    }
-
-    repeated Robot robot = 1;
-}
-
-message ResumeHORSE{
-    message PourMessage{
-        repeated int32 pourGold=1;
-    }
-
-    required int32 status=1; //现阶段
-    optional PourMessage pourmessage=2; //押注金额
-    repeated int32 result=3; //落点
-    required int32 huode=4; 
-    repeated int32 xiazhu=5;
-    repeated int32 totalpour=6;
-}
-
-message PourHORSE{
-    required int32 pourobject=1; // 押注类型
-    required int32 pourmoney=2; // 押注金额
-    optional int32 type=3; // 押注成功与否（1是成功，2是钱不够，3是押多了）
-}
-
-message ResultHORSE{
-    required int32 type=1;
-    repeated int32 result=2;
-    required int32 huode=3;
-    repeated int32 xiazhu=4;
-    repeated int32 totalpour=5;
-}
-
-message SecondHORSE{
-    repeated int32 bets = 1; //总下注
-}
-
-message ContinuedHORSE{
-    message continued {
-        required int32 pourobject=1;
-        required int32 pourmoney=2;
-    }
-
-    repeated continued continueds = 1;
-    optional int32 type = 2; // 1.成功 2.已经续投过 3.上把没有押注 4.钱不够
-}
-
-message CancelHORSE{
-    optional int32 type = 1; // 1.成功 2.已经取消过
-}
-
-message RestoreHORSE{
-    message restore {
-        required int32 pourobject=1;
-        required int32 pourmoney=2;
-    }
-
-    repeated restore restores = 1;
-    optional int32 type = 2; // 1.成功 2.已经复原过 3.没有复原的数据 4.钱不够
-}
-
-
-message BetRateHORSE{
-    repeated int32 rates = 1; //押注倍率
-}
-
-message StatusHORSE{
-    required int32 status = 1; //阶段
-    required int32 time = 2; //阶段剩余时间
-}
-
-message HistoryHORSE{
-    message history {
-        required int32 type=1;
-        repeated int32 result=2;
-    }
-
-    repeated history History = 1;
-}
-
-message PourTGG{
-    required int32 pourrate = 1;
-    required sint64 pourmoney = 2;
-}
-
-message ResultTGG{
-    message Type{
-        repeated int32 type = 1;
-        required int32 gold = 2;
-    }
-    repeated int32 showcards = 1;
-    repeated Type wintype = 2;
-    repeated int32 wingold = 3;
-    required int32 randomtime = 4;
-    required sint64 wintotal = 5;
-    required sint64 owngold = 6;
-    optional int32 goldrate = 7;
-    optional int32 countboll = 8;
-}
-
-message ResumeTGG{
-    required int32 state = 1;
-}
-
-message BossNotify {
-    required int32 status = 1; //1表示BOSS出现了，//2表示BOSS结束了
-    required int32 bossid = 2; //boss的type
-    repeated int32 params = 3; //额外需要的参数
-}
-
-message ChanageSceneNtf {
-    required int32 id = 1; //场景ID
-}
-
-message ZjhPushGameStart{
-    required int32 banker = 1;    //庄家seatid
-}
-
-message ZjhPushDealCards{
-}
-
-message ZjhPushOpt{
-    required int32 seatid = 1; //需要操作的玩家seatid
-    repeated int32 opts = 2;  //可以操作的选项
-}
-
-message ZjhRequestOpt{
-    required int32 opt = 1;   //操作
-    optional int32 data = 2;  
-}
-
-message ZjhPushPlayersOpt{
-    required int32 seatid = 1; //操作的玩家seatid
-    optional int32 opt = 2;
-    optional int32 opttype = 3;
-    optional int32 num = 4;
-    repeated int32 extradata = 5;
-}
-
-message ZjhWatchCardResult{
-    repeated int32 cards = 1;
-}
-
-message ZjhCompareCardResult{
-    required int32 src = 1;         //比牌的seatid
-    required int32 des = 2;         //被比的seatid
-    required int32 lose = 3;        //输的seatid
-}
-
-message ZjhShowCards {
-    message cardinfo{
-        required int32 seatid = 1;
-        repeated int32 cards = 2;
-    }
-    repeated cardinfo info = 1;
-}
-
-message ZjhGameEnd {
-    message settleinfo{
-        required int32 seatid = 1;
-        required int32 score = 2;
-    }
-    repeated settleinfo info = 1;
-}
-
-message FishUseSkill {
-    required int32 type = 1; //触发的鱼的技能id
-    required int32 uid = 2;
-    repeated int32 params = 3; //触发参数
-}
-
-message FishSkillNtf {
-    repeated int32 params = 1;
 }
