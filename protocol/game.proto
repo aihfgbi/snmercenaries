@@ -8,11 +8,10 @@ enum MsgType {
     REQ_SIT_DOWN = 60004;//请求坐下
     RES_SIT_DOWN = 70004;//请求坐下返回
     REQ_RESUME = 60005;//请求重连信息
-    RES_RESUME_MJ = 70005;//麻将重连信息
-
-    REQ_CHAT = 60030;//聊天
-    RES_CHAT = 70030;//聊天
-
+    REQ_CHAT = 60006;//聊天
+    RES_CHAT = 70006;//聊天
+    REQ_READY = 60007;
+    RES_RESUME_MJ = 70105;//麻将重连信息
 }
 
 message resTableInfo {
@@ -62,6 +61,19 @@ message resSitDown {
     optional string headimg = 4;
 }
 
+message reqChat {
+    required int32 type = 1;//1文字 2表情 3语音
+    required int32 to = 2;//对象的id，默认传0表示所有人
+    required string msg = 3;
+}
+
+message resChat {
+    required int32 type = 1;//1文字 2表情 3语音
+    required int32 to = 2;//对象的id，默认传0表示所有人
+    required string msg = 3;
+    required int32 uid = 4;//发送人的ID
+}
+
 message GetReadyNtf {
     required int32 uid = 1;
     required int32 seatid = 2;
@@ -79,12 +91,7 @@ message UserOnline {
     required int32 uid = 1;
 }
 
-message ChatNtf {
-    required int32 type = 1;
-    required int32 to = 2;
-    required string msg = 3;
-    required int32 uid = 4;
-}
+
 
 message StartRound {
     required int32 round = 1;
