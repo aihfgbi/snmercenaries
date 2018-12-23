@@ -10,25 +10,30 @@ enum MsgType {
     REQ_RESUME = 60005;//请求重连信息
     REQ_CHAT = 60006;//聊天
     RES_CHAT = 70006;//聊天
-    REQ_READY = 60007;
-    RES_RESUME_MJ = 70105;//麻将重连信息
+    REQ_READY = 60007;//准备
+    RES_READY = 70007;//准备返回
+    RES_GAME_START = 70008;//遊戲開始
+    RES_RESUME_MJ = 71005;//麻将重连信息
 }
 
-message resTableInfo {
-    message player {
-        required int32 uid = 1; //用户uid
-        required string nickname = 2; //用户昵称
-        required int32 seatid = 3; //用户座位
-        required int32 sex = 4; //性别
-        required int32 online = 5; //是否在线，1在线，0不在线
-        optional int32 ready = 6; //是否已经准备，1准备，0为准备
-        optional int32 score = 7; //当前分值
-        optional sint64 gold = 8; //金币
-        optional int32 trusteeship = 10; //是否托管1托管
-        optional string headimg = 11; //用户头像的URL
-        repeated int32 params = 12; //不同游戏的额外用户数据
-    }
+//用户信息
+message player {
+    required int32 uid = 1; //用户uid
+    required string nickname = 2; //用户昵称
+    required int32 seatid = 3; //用户座位
+    required int32 sex = 4; //性别
+    required int32 online = 5; //是否在线，1在线，0不在线
+    optional int32 ready = 6; //是否已经准备，1准备，0为准备
+    optional int32 score = 7; //当前分值
+    optional sint64 gold = 8; //金币
+    optional int32 trusteeship = 9; //是否托管1托管
+    optional string headimg = 10; //用户头像的URL
+    optional string ip = 11; 
+}
 
+
+//RES_TABLE_INFO = 70001;//发送桌子信息
+message resTableInfo {
     required int32 owner = 1; //房主
     required int32 endtime = 2; //0表示已经开局，时间戳表示房间解散的时间
     required int32 gameid = 3; //游戏ID
@@ -40,20 +45,31 @@ message resTableInfo {
     required int32 isGoldGame = 9; //是否是金币模式0表示开房模式，1表示金币模式
     repeated player players = 10; //玩家列表
     repeated int32 extradata = 11; //不同游戏的额外数据
+    required int32 modelid = 12; //游戏类型
 }
 
+//RES_ENTER_TABLE = 70002;//广播加入桌子
+message resEnterTable {
+    required player info = 1; //玩家信息
+}
+
+//REQ_LEAVE_TABLE = 60003;//离开桌子请求
 message reqLeaveTable {
 }
 
+//RES_LEAVE_TABLE = 70003;//离开桌子返回，成功会广播
 message resLeaveTable {
     required int32 uid = 1;
-    optional int32 result = 2; //如果有值，1000表示离开房间失败，1001表示房间由于没人而解散，1002表示游戏正常结束了
+    required int32 seatid = 2;//座位号
+    optional int32 result = 3; //如果有值，1000表示离开房间失败，1001表示房间由于没人而解散，1002表示游戏正常结束了
 }
 
+//REQ_SIT_DOWN = 60004;//请求坐下
 message reqSitDown {
     required int32 seatid = 1;//-1表示站起來
 }
 
+//RES_SIT_DOWN = 70004;//请求坐下返回
 message resSitDown {
     required int32 uid = 1;
     required int32 seatid = 2;
@@ -61,28 +77,44 @@ message resSitDown {
     optional string headimg = 4;
 }
 
+//REQ_RESUME = 60005;//请求重连信息
+message reqResume {
+    required int32 gameid = 1;
+    required int32 type = 2;//1 同时获取桌子信息  2 只获取游戏恢复信息
+}
+
+//REQ_CHAT = 60006;//聊天
 message reqChat {
-    required int32 type = 1;//1文字 2表情 3语音
+    required int32 type = 1;
     required int32 to = 2;//对象的id，默认传0表示所有人
     required string msg = 3;
 }
 
+//RES_CHAT = 70006;//聊天
 message resChat {
-    required int32 type = 1;//1文字 2表情 3语音
+    required int32 type = 1;
     required int32 to = 2;//对象的id，默认传0表示所有人
     required string msg = 3;
     required int32 uid = 4;//发送人的ID
+    required int32 seatid = 5;//座位号
 }
 
-message GetReadyNtf {
+//REQ_READY = 60007;//准备
+message reqReady {
+}
+
+//RES_READY = 70007;//准备返回
+message resReady {
     required int32 uid = 1;
     required int32 seatid = 2;
 }
 
-message GameStart {
+//RES_GAME_START = 70008;//游戏开始
+message resGameStart {
     optional int32 endtime = 1;
 }
 
+//-------------------------------------------------------------------------------------------------------------------------------
 message UserOffline {
     required int32 uid = 1;
 }
@@ -98,18 +130,7 @@ message StartRound {
     required int32 total = 2;
 }
 
-message EnterTable {
-    required int32 uid = 1; //用户uid
-    required string nickname = 2; //用户昵称
-    required int32 seatid = 3; //用户座位
-    required int32 sex = 4; //性别
-    required int32 online = 5; //是否在线，1在线，0不在线
-    optional int32 ready = 6; //是否已经准备，1准备，0为准备
-    optional int32 score = 7; //当前分值
-    optional sint64 gold = 8; //金币
-    optional int32 money = 9; //红包
-    optional string headimg = 10; //头像
-}
+
 
 message GmChangeCards {
     repeated int32 cards = 1;

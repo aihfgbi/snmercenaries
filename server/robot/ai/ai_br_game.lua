@@ -201,7 +201,7 @@ function server_msg.BRResult(msg)
 end
 
 --离开房间
-function server_msg.LeaveTableNtf(msg)
+function server_msg.resLeaveTable(msg)
 
 end
 

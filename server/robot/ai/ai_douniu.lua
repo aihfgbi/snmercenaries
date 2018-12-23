@@ -79,7 +79,7 @@ function server_msg.GameStart(msg)
 end
 
 --离开桌子
-function server_msg.LeaveTableNtf(msg)
+function server_msg.resLeaveTable(msg)
 	--清除数据
 	for uid,p in pairs(players) do
 		if p.uid == msg.uid then

@@ -464,8 +464,7 @@ function CMD.online(uid, node, addr)
 		money = 0,
 		sex = _userdata.sex or 1,
 		bank = _userdata.bank,
-		-- hongbao = 0,
-		-- totalhongbao = _userdata.totalhongbao or 0
+		ip = _userdata.lastIp or "",
 	}
 
 	if _userdata.ctrltype then

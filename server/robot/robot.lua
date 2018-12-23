@@ -85,7 +85,7 @@ function CMD.send_to_client(uid, name, msg)
 		robot_exit(uid)
 	else
 		name = string.split(name, ".")[2]
-		if name == "LeaveTableNtf" and msg.uid == robot_uid then
+		if name == "resLeaveTable" and msg.uid == robot_uid then
 			robot_exit(uid)
 		elseif ai then
 			ai.dispatch(name, msg)

@@ -2756,7 +2756,6 @@ local function auto_sitdown(p)
             end
             LOG_DEBUG("auto sit down success")
             p.kick_timeout = osapi.os_time() + KICK_TIMEOUT
-            _tapi.send_to_all("game.SitdownNtf", { uid = p.uid, seatid = i, nickname = p.nickname, headimg = p.headimg or "" })
             break
         end
     end
@@ -3181,9 +3180,9 @@ function mj_logic.resume(p, is_resume)
  --   PRINT_T(msg)
     p:send_msg("game.MJResume", msg)
 --    _tapi.send_to_all("game.UserOnline", { uid = p.uid })
-    if not is_resume and _isUseGold then
-        auto_sitdown(p)
-    end
+    -- if not is_resume and _isUseGold then
+    --     auto_sitdown(p)
+    -- end
 
     if is_trusteeship(p) then
         player_trusteeship(p, 0)
@@ -3235,12 +3234,14 @@ function mj_logic.leave_game(p)
 end
 
 function mj_logic.get_tableinfo(p)
+    luadump(p,"=====pppppp=====")
+    auto_sitdown(p)--调用自动坐下
 	local msg = {}
     local list = {}
     for uid, v in pairs(_players) do
         osapi.tinsert(list, {
             uid = v.uid,
-            nickname = v.nickname,
+            nickname = v.nickName,
             sex = v.sex or 1,
             seatid = v.seatid or 0,
             ready = v.ready or 0,
@@ -3248,12 +3249,13 @@ function mj_logic.get_tableinfo(p)
             score = v.score or 0,
             gold = v.gold or 0,
             headimg = v.headimg or "",
-            trusteeship = v.trusteeship or 0
+            trusteeship = v.trusteeship or 0,
+            ip = v.ip or "",
         })
     end
     msg.owner = _owner
     msg.endtime = _end_time or 0
-    msg.gameid = _gameid
+    msg.gameid,msg.modelid = CHANGE_GAMEID(1,_gameid) 
     msg.times = _max_times
     msg.playedtimes = (_played_times or 0) + 1
     msg.score = _base_score

@@ -112,7 +112,7 @@ message GameEnd {
     repeated info infos = 2;
 }
 
-message LeaveTableNtf {
+message resLeaveTable {
     required int32 uid = 1;
     optional int32 result = 2; //如果有值，1000表示离开房间失败，1001表示房间由于没人而解散，1002表示游戏正常结束了
 }

@@ -110,3 +110,20 @@ function RAND_STR(len)
     end
     return table.concat(str, "")
 end
+
+--[[
+    @desc: 分解或者合成游戏id
+    author:{author}
+    time:2018-12-22 23:44:13
+    --@type: 1分解  2合成
+    @return:
+]]
+function CHANGE_GAMEID(type,gid,mid)
+	if type == 1 and gid and gid > 1000 then
+		local gameid = math.floor(gid/1000)
+		local modelid = math.floor( gid%1000 )
+		return gameid,modelid
+	elseif type == 2 and gid and mid then
+		return gid * 1000 + mid
+	end
+end

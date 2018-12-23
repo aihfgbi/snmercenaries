@@ -653,7 +653,7 @@ function this.reqCreateGame(msg)
         return "hall.resQuickJoinGame", {result = 3, gameid = 1000, ismatch = -1}
     end
     if msg.gameid and msg.gameid ~= 1000 and msg.modelid and msg.modelid ~= 0 then
-        local gameid = msg.gameid * 1000 + msg.modelid --获得真正的游戏id
+        local gameid = CHANGE_GAMEID(2,msg.gameid,msg.modelid) --获得真正的游戏id
         local node, addr = call_manager("create_table", gameid, msg.pay, msg.score, msg.times, player, msg.params)
         if not addr then
             node = tonumber(node) or 101
@@ -686,7 +686,7 @@ function this.reqQuickJoinGame(msg)
         join_game(node, addr, gid)
     elseif msg.gameid and msg.modelid and msg.gameid ~= 1000 then --加入金币游戏匹配场
         -- quick_join(gameid, player)
-        local gameid = msg.gameid * 1000 + msg.modelid
+        local gameid = CHANGE_GAMEID(2,msg.gameid,msg.modelid)
         local node, addr = call_manager("quick_join", gameid, player) --这个是调用usermanager里面的
         if not addr then
             node = tonumber(node) or 101
