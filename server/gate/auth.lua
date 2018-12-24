@@ -329,10 +329,10 @@ function CMD.start(conf)
     sharedata.new("hall", {buffer})
     protobuf.register(buffer)
 
-    -- f = assert(io.open(rootpath .. "protocol/user.proto" , "r"))
-    -- buffer = f:read "*a"
-    -- f:close()
-    -- sharedata.new("proto_user", {buffer})
+    f = assert(io.open(rootpath .. "protocol/game.pb" , "r"))
+    buffer = f:read "*a"
+    f:close()
+    sharedata.new("game", {buffer})
 
     -- f = assert(io.open(rootpath .. "protocol/gm.proto" , "r"))
     -- buffer = f:read "*a"

@@ -89,14 +89,17 @@ end
     @return:
 ]]
 local function msg_encode(name, msg)
-	assert(name)
 	local msgid = msgcmd[name]
-	assert(msgid, "agent msg_encode fail, unknow msg, msgname="..name)
+	if not msgid then
+		LOG_DEBUG("agent msg_encode fail, unknow msg, msgname="..name)
+	end
 
 	local ok,data
 	if type(msg) == "table" then
 		ok,data = pcall(protobuf.encode, name, msg)
-		assert(ok, "agent msg_encode protobuf.encode fail, msgname="..name)
+		if not ok then
+			LOG_DEBUG("agent msg_encode protobuf.encode fail, msgname="..name)
+		end
 	end
 
 	local len = string.len(data)
@@ -119,7 +122,7 @@ end
 
 local function send_heartbeat()
 	--LOG_DEBUG("send heart time:"..time.time())
-	local ok,data = pcall(msg_encode, "hall.resHeart", {time = time.time()})
+	local ok,data = pcall(msg_encode, "hall.resHeart", {time = os.time()})
 	if ok then
 		send_package(data)
 	end
@@ -207,6 +210,7 @@ skynet.register_protocol {
 	unpack = skynet.tostring,
 	dispatch = function (_, _, msg)
 		msg_dispatch(msg)
+		return true
 	end
 }
 
@@ -321,6 +325,7 @@ skynet.start(function()
 
 	-- parser.register2(files) --注册protocol协议文件
 	protobuf.register(sharedata.query("hall")[1])
+	protobuf.register(sharedata.query("game")[1])
 	skynet.dispatch("lua", function(_,_, command, ...)
 		local f = CMD[command]
 		skynet.ret(skynet.pack(f(...)))

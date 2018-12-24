@@ -51,12 +51,35 @@ local CMD = {
 	["10013"] = "hall.reqExchangeGold",
     ["hall.resExchangeGold"] = 20013, --金币兑换返回
 	["20013"] = "hall.resExchangeGold",
-
 	["hall.reqCreateGame"] = 10014, --請求創建房間
 	["10014"] = "hall.reqCreateGame",
 	["hall.reqQuickJoinGame"] = 10015, --快速加入房间
 	["10015"] = "hall.reqQuickJoinGame",
 	["hall.resQuickJoinGame"] = 20015, --加入房间返回
 	["20015"] = "hall.resQuickJoinGame",
+
+	--游戏共有
+	["game.resTableInfo"] = 70001, --/发送桌子信息
+	["70001"] = "hall.resTableInfo",
+	["game.resEnterTable"] = 70002, --/广播加入桌子
+	["70002"] = "hall.resEnterTable",
+	["game.reqLeaveTable"] = 60003, --/离开桌子请求
+	["60003"] = "hall.reqLeaveTable",
+	["game.resLeaveTable"] = 70003, --/离开桌子返回，成功会广播
+	["70003"] = "hall.resLeaveTable",
+	["game.reqSitDown"] = 60004, --/请求坐下
+	["60004"] = "hall.reqSitDown",
+	["game.resSitDown"] = 70004, --/请求坐下返回
+	["70004"] = "hall.resSitDown",
+	["game.reqResume"] = 60005, --/请求重连信息
+	["60005"] = "hall.reqResume",
+	["game.reqChat"] = 60006, --/聊天
+	["60006"] = "hall.reqChat",
+	["game.reqReady"] = 60007, --/准备
+	["60007"] = "hall.reqReady",
+	["game.resReady"] = 70007, --/准备返回
+	["70007"] = "hall.resReady",
+	["game.resGameStart"] = 70008, --/游戏开始
+	["70008"] = "hall.resGameStart",
 }
 return CMD

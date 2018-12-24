@@ -570,7 +570,7 @@ function this.reqRefreshInfo(msg)
                 vipexp = userdata.vipexp or 0,
                 sex = userdata.sex,
                 signature = userdata.signature or "",
-                headimg = userdata.headImg or string.format( headimgurl,RAND_NUM(1,4000) ),
+                headimg = --[[userdata.headImg or]] string.format( headimgurl,RAND_NUM(1,4000) ),
                 gameid = gameid,
                 gametype = gametype,
                 charged = userdata.charged or 0

@@ -21,7 +21,7 @@ end
 
 function handler.message(fd, msg, sz)
     -- recv a package, forward it
-    LOG_DEBUG("recive:" .. sz)
+    --LOG_DEBUG("recive:" .. sz)
     local c = connection[fd]
     local agent = c.agent
     if agent then

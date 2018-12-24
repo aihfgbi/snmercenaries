@@ -3260,7 +3260,7 @@ function mj_logic.get_tableinfo(p)
     msg.playedtimes = (_played_times or 0) + 1
     msg.score = _base_score
     msg.paytype = _pay_type
-    msg.code = _table_index
+    msg.roomid = _table_index
     msg.players = list
     msg.isGoldGame = _isUseGold or 0
     if _isUseGold then
@@ -3269,6 +3269,7 @@ function mj_logic.get_tableinfo(p)
         msg.extradata = _rule_type
     end
    
+    luadump(msg,"====llllllllll==========")
     -- p:send_msg("game.TableInfo", msg)
     return msg
 end
