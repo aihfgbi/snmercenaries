@@ -94,7 +94,7 @@ local function gate_heart()
 				local ok, count = pcall(cluster.call, node, v.addr, "heart")
 				if ok then
 					gate_map[node].count = count or 0
-					LOG_DEBUG(node..","..v.addr..":"..gate_map[node].count)
+					--LOG_DEBUG(node..","..v.addr..":"..gate_map[node].count)
 				else
 					gate_map[node] = nil
 				end
