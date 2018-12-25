@@ -52,6 +52,7 @@ local _isMatch                  --是否是金币模式
 local _isTaste                  --是否体验模式
 local KICK_TIMEOUT = 20         --金币模式准备超时 秒
 local _rule_type                --麻将的规则玩法
+local _table_index
 
 local WAIT_DEAL = 20           --等待客户端请求发牌协议超时时间
 local _deal_tiles_time          --超时发牌的时间点
@@ -521,7 +522,7 @@ local function cost_money( p )
         local cost = _game_cfg.price[_pay_type]
         if not cost then
             LOG_ERROR("it must be have price")
-            return "game.SitdownNtf", { uid = p.uid, seatid = -1 }
+            return "game.resSitDown", { uid = p.uid, seatid = -1 }
         end
         -- local ok, result = pcall(p.call_userdata, p, "sub_gold", p.uid, cost, 2001)
   --       if not ok or not result then
@@ -2829,28 +2830,28 @@ function client.LandTrusteeship(p, msg)
     end
 end
 
-function client.SitdownNtf( p, msg )
-    if _isUseGold then
-        LOG_WARNING("gold module can not sitdown")
-        return 
-    end
-    local seatid = tonumber(msg.seatid)
-    if not check_seat(seatid) then
-        return
-    end
+-- function client.SitdownNtf( p, msg )
+--     if _isUseGold then
+--         LOG_WARNING("gold module can not sitdown")
+--         return 
+--     end
+--     local seatid = tonumber(msg.seatid)
+--     if not check_seat(seatid) then
+--         return
+--     end
     
-    if p.seatid and p.seatid > 0 then
-        _players_sit[p.seatid] = nil
-    end
+--     if p.seatid and p.seatid > 0 then
+--         _players_sit[p.seatid] = nil
+--     end
     
-    _players_sit[seatid] = p
-    p.seatid = seatid
-    init_player_info(p)
-    LOG_DEBUG("player[%s] sit down success seatid[%d]", p.nickname, seatid)
-  --  _tapi.send_to_all("game.SitdownNtf", { uid = p.uid, seatid = seatid, nickname = p.nickname, headimg = p.headimg or "" })
-end
+--     _players_sit[seatid] = p
+--     p.seatid = seatid
+--     init_player_info(p)
+--     LOG_DEBUG("player[%s] sit down success seatid[%d]", p.nickname, seatid)
+--   --  _tapi.send_to_all("game.SitdownNtf", { uid = p.uid, seatid = seatid, nickname = p.nickname, headimg = p.headimg or "" })
+-- end
 
-function client.GetReadyNtf( p, msg )
+function client.reqReady( p, msg )
     
     if _has_start then return end 
     if not p.ready or p.ready == 0 then
@@ -2864,9 +2865,11 @@ function client.GetReadyNtf( p, msg )
                 p.kick_timeout = nil
             end
             LOG_DEBUG("player[%d] get ready", p.uid)
-            _tapi.send_to_all("game.GetReadyNtf", { uid = p.uid, seatid = p.seatid })
+            _tapi.send_to_all("game.resReady", { uid = p.uid, seatid = p.seatid, result = 1 })
+            return
         end
     end
+    p:send_msg("game.resReady", { uid = p.uid, seatid = -1, result = 1 })
 end
 
 function client.MJPlayerOptReq( p, msg )
@@ -2981,7 +2984,7 @@ function client.StartNextGame(p)
     if check_player_in_game(p) and p.re_ready and p.re_ready == 0 then
         p.re_ready = 1
         _re_ready_count = _re_ready_count + 1
-        _tapi.send_to_all("game.GetReadyNtf", { uid = p.uid, seatid = p.seatid })
+        _tapi.send_to_all("game.resReady", { uid = p.uid, seatid = p.seatid, result = 1})
     end
 end
 
@@ -3234,14 +3237,13 @@ function mj_logic.leave_game(p)
 end
 
 function mj_logic.get_tableinfo(p)
-    luadump(p,"=====pppppp=====")
     auto_sitdown(p)--调用自动坐下
 	local msg = {}
     local list = {}
     for uid, v in pairs(_players) do
         osapi.tinsert(list, {
-            uid = v.uid,
-            nickname = v.nickName,
+            uid = tonumber(v.uid),
+            nickname = v.nickname,
             sex = v.sex or 1,
             seatid = v.seatid or 0,
             ready = v.ready or 0,
@@ -3263,6 +3265,8 @@ function mj_logic.get_tableinfo(p)
     msg.roomid = _table_index
     msg.players = list
     msg.isGoldGame = _isUseGold or 0
+    msg.status = _game_status
+    msg.maxplayer = _game_cfg.max_player
     if _isUseGold then
         msg.extradata = {0,0,0,_game_cfg.init_params.base_score, _game_cfg.init_params.min_gold, _isTaste and 1 or 0}
     else

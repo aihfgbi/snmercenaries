@@ -1,5 +1,5 @@
 
-ü&
+¯'
 
 game.protogame"²
 player
@@ -15,7 +15,7 @@ game.protogame"²
 headimg
  (	
 
-ip (	"é
+ip (	"Œ
 resTableInfo
 owner (
 endtime (
@@ -30,7 +30,9 @@ isGoldGame	 (
 players
  (2.game.player
 	extradata (
-modelid ("+
+modelid (
+	maxplayer (
+status ("+
 resEnterTable
 info (2.game.player"
 reqLeaveTable"<
@@ -63,10 +65,11 @@ resSitDown
 uid (
 seatid ("
 
-reqReady"'
+reqReady"7
 resReady
 uid (
-seatid ("
+seatid (
+result ("
 resGameStart
 endtime ("
 UserOffline

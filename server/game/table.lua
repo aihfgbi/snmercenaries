@@ -339,7 +339,7 @@ function CMD.dispatch(uid, name, msg)
             end
             return "game.resLeaveTable", {uid = p.uid, result = 1000}
         end
-    elseif name == "SitdownNtf" then
+    elseif name == "reqSitDown" then
         if p and msg and msg.seatid then
             if not isusegold then
                 -- 非金币模式
@@ -353,35 +353,35 @@ function CMD.dispatch(uid, name, msg)
                         else
                             -- 扣费失败，重新站起来
                             logic.standup(p, msg.seatid)
-                            return "game.SitdownNtf", {uid = p.uid, seatid = -1}
+                            return "game.resSitDown", {uid = p.uid, seatid = -1}
                         end
                     end
                     if config.max_player < 9 then
                         -- 如果是百人场，那么不需要通知给其他人
-                        api.send_to_all("game.SitdownNtf", {uid = p.uid, seatid = msg.seatid})
+                        api.send_to_all("game.resSitDown", {uid = p.uid, seatid = msg.seatid})
                     else
-                        p:send_msg("game.SitdownNtf", {uid = p.uid, seatid = msg.seatid})
+                        p:send_msg("game.resSitDown", {uid = p.uid, seatid = msg.seatid})
                     end
                 else
-                    return "game.SitdownNtf", {uid = p.uid, seatid = -2}
+                    return "game.resSitDown", {uid = p.uid, seatid = -2}
                 end
             end
         end
     elseif name == "UserSpeakNtf" then
-        -- 		message UserSpeakNtf {
-        --     required int32 uid = 1;
-        --     required string voiceid = 2;
-        -- }
+        -- -- 		message UserSpeakNtf {
+        -- --     required int32 uid = 1;
+        -- --     required string voiceid = 2;
+        -- -- }
 
-        if p and msg and msg.voiceid and p.seatid and p.seatid > 0 then
-            -- 必须是坐下的才能说话
-            if (p.chattime or 0) > os.time() then
-                LOG_DEBUG("player[%d] speak faild. in cd time", p.uid)
-                return
-            end
-            p.chattime = os.time() + 1
-            api.send_to_all("game.UserSpeakNtf", {uid = p.uid, voiceid = msg.voiceid})
-        end
+        -- if p and msg and msg.voiceid and p.seatid and p.seatid > 0 then
+        --     -- 必须是坐下的才能说话
+        --     if (p.chattime or 0) > os.time() then
+        --         LOG_DEBUG("player[%d] speak faild. in cd time", p.uid)
+        --         return
+        --     end
+        --     p.chattime = os.time() + 1
+        --     api.send_to_all("game.UserSpeakNtf", {uid = p.uid, voiceid = msg.voiceid})
+        -- end
     else
         if p then
             return logic.dispatch(p, name, msg)
