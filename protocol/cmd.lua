@@ -60,26 +60,28 @@ local CMD = {
 
 	--游戏共有
 	["game.resTableInfo"] = 70001, --/发送桌子信息
-	["70001"] = "hall.resTableInfo",
+	["70001"] = "game.resTableInfo",
 	["game.resEnterTable"] = 70002, --/广播加入桌子
-	["70002"] = "hall.resEnterTable",
+	["70002"] = "game.resEnterTable",
 	["game.reqLeaveTable"] = 60003, --/离开桌子请求
-	["60003"] = "hall.reqLeaveTable",
+	["60003"] = "game.reqLeaveTable",
 	["game.resLeaveTable"] = 70003, --/离开桌子返回，成功会广播
-	["70003"] = "hall.resLeaveTable",
+	["70003"] = "game.resLeaveTable",
 	["game.reqSitDown"] = 60004, --/请求坐下
-	["60004"] = "hall.reqSitDown",
+	["60004"] = "game.reqSitDown",
 	["game.resSitDown"] = 70004, --/请求坐下返回
-	["70004"] = "hall.resSitDown",
+	["70004"] = "game.resSitDown",
 	["game.reqResume"] = 60005, --/请求重连信息
-	["60005"] = "hall.reqResume",
+	["60005"] = "game.reqResume",
 	["game.reqChat"] = 60006, --/聊天
-	["60006"] = "hall.reqChat",
+	["60006"] = "game.reqChat",
+	["game.resChat"] = 70006, --/聊天返回
+	["70006"] = "game.resChat",
 	["game.reqReady"] = 60007, --/准备
-	["60007"] = "hall.reqReady",
+	["60007"] = "game.reqReady",
 	["game.resReady"] = 70007, --/准备返回
-	["70007"] = "hall.resReady",
+	["70007"] = "game.resReady",
 	["game.resGameStart"] = 70008, --/游戏开始
-	["70008"] = "hall.resGameStart",
+	["70008"] = "game.resGameStart",
 }
 return CMD

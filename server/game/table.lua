@@ -73,10 +73,10 @@ local function tick_tick()
 end
 
 local function send_msg(self, name, msg)
-    if self.online ~= 1 then
+    if self.online ~= 1 or self.isrobot then
         return
     end
-    --	LOG_DEBUG("send msg:"..name..","..self.uid)
+    --LOG_DEBUG("---===send msg:"..name..","..self.uid)
     local ok, result = pcall(cluster.send, self.agnode, self.agaddr, "send_to_client", self.uid, name, msg)
     if not ok then
         LOG_ERROR("send_msg error:" .. tostring(result))
