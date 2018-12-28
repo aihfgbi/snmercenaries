@@ -3272,8 +3272,7 @@ function mj_logic.get_tableinfo(p)
     else
         msg.extradata = _rule_type
     end
-   
-    luadump(msg,"====llllllllll==========")
+    
     -- p:send_msg("game.TableInfo", msg)
     return msg
 end

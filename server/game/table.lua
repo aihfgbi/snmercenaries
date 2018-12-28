@@ -73,7 +73,7 @@ local function tick_tick()
 end
 
 local function send_msg(self, name, msg)
-    if self.online ~= 1 or self.isrobot then
+    if self.online ~= 1 then
         return
     end
     --LOG_DEBUG("---===send msg:"..name..","..self.uid)
