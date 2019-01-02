@@ -495,7 +495,7 @@ function this.BuyReq(msg)
             if add_gold(count, reason) then
                 LOG_DEBUG("加钱了")
                 -- 如果是金币增加了，那么需要通知给游戏
-                send_to_game("add_gold", uid, count, 1001)
+                send_to_game("update_gold", uid, count, 1001)
             else
                 LOG_DEBUG("加钱失败了")
             end
@@ -1082,7 +1082,7 @@ function this.TakeSafeMoneyReq(msg)
     if sub_bank(value, 1002) then
         if msg.channel == 1 then
             if add_gold(value, 107) then
-                send_to_game("add_gold", uid, value, 1003)
+                send_to_game("update_gold", uid, value, 1003)
                 local sql =
                     "INSERT INTO tbl_bank_log_" ..
                     os.date("%Y%m") ..

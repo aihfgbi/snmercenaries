@@ -159,7 +159,7 @@ local function discard()
 
 	table.removebyvalue(robot_info.tiles, discard_tile)
 	
-	send_to_server("MJPlayerOptReq", {opts = {opttype=OPT_TYPE.DISCARD, cards={discard_tile}}})
+	send_to_server("reqMJPlayerOpt", {opts = {opttype=OPT_TYPE.DISCARD, cards={discard_tile}}})
 --	LOG_WARNING("robot[%d] discard[%s] over", robot_info.uid, tostring(discard_tile))
 	LOG_DEBUG("robot[%d] discard[%s] cur_tiles[%s]", robot_info.uid, tostring(discard_tile), table.concat(robot_info.tiles, ","))
 	last_tile = nil
@@ -167,19 +167,19 @@ end
 
 local function win()
 	LOG_DEBUG("robot[%d] win", robot_info.uid)
-	send_to_server("MJPlayerOptReq", {opts = {opttype=OPT_TYPE.WIN, cards={}}})
+	send_to_server("reqMJPlayerOpt", {opts = {opttype=OPT_TYPE.WIN, cards={}}})
 end
 
 local function player_opt_req(pa)
-	send_to_server("MJPlayerOptReq", {opts = pa})
+	send_to_server("reqMJPlayerOpt", {opts = pa})
 end
 
 local function pass()
-	send_to_server("MJPlayerOptReq", {opts = {opttype=OPT_TYPE.PASS, cards={}}})
+	send_to_server("reqMJPlayerOpt", {opts = {opttype=OPT_TYPE.PASS, cards={}}})
 end
 
 local function get_ready()
-	send_to_server("GetReadyNtf", {})
+	send_to_server("reqReady", {})
 end
 
 local function MJRequestDealTiles( ... )
@@ -241,14 +241,17 @@ local function player_chi(tiles)
 end
 
 function server_msg.MJGameInfo(msg)
-	banker_seatid = msg.banker
-	shifter1 = msg.shifter[1] or 0
-	shifter2 = msg.shifter[2] or 0
-	mj_deal.set_deal_shifter(shifter1, shifter2)
-	delay_call(2, MJRequestDealTiles)
+	
 end
 
-function server_msg.MJCardMove(msg)
+--[[
+    @desc: 发牌
+    author:{author}
+    time:2019-01-03 24:53:27
+    --@msg: 
+    @return:
+]]
+function server_msg.resMJDealCard(msg)
 	--发牌
 	if msg.cards and #msg.cards == 13 then
 		robot_info.tiles = msg.cards
@@ -260,6 +263,14 @@ function server_msg.MJCardMove(msg)
 			LOG_DEBUG("winner_robot tiles [%s]", table.concat(robot_info.tiles, ","))
 		end
 	end
+	banker_seatid = msg.banker
+	shifter1 = msg.shifter[1] or 0
+	shifter2 = msg.shifter[2] or 0
+	mj_deal.set_deal_shifter(shifter1, shifter2)
+	delay_call(2, MJRequestDealTiles)--这个功能暂时是没有用的20190103
+end
+
+function server_msg.resMJPlayerOpt(msg)
 	--有人出牌
 	if msg.cards and #msg.cards == 1 and msg.opttype == OPT_TYPE.DISCARD then
 		if fromSeatid == banker_seatid then
@@ -292,34 +303,41 @@ function server_msg.MJCardMove(msg)
 	end
 end
 
-function server_msg.MJPlayerOpt(msg)
+function server_msg.resMJDrawCard(msg)
+	if not msg.card then
+		return
+	end
+	last_tile = msg.card
+	-- if robot_info.must_win then
+	-- 	LOG_WARNING("robot[%d] draw[%d]", robot_info.uid, last_tile)
+	-- end
+	--第一轮需要额外延迟几秒
+	local extra_time = 0
+	if not next(table_tiles) then
+		extra_time = 3
+	end
+	if check_win() then
+		delay_call(math.random(2+extra_time,3+extra_time), win)
+	elseif not robot_info.must_win then
+		table.insert(robot_info.tiles, last_tile)
+		local an_gang_tile = check_an_gang()
+		if an_gang_tile then
+			delay_call(math.random(1+extra_time,2+extra_time), player_opt_req, {opttype=OPT_TYPE.BLACK_GANG, cards={an_gang_tile}})
+		elseif check_peng_gang(last_tile) then
+			delay_call(math.random(1+extra_time,2+extra_time), player_opt_req, {opttype=OPT_TYPE.PENG_GANG, cards={last_tile}})
+		else
+			delay_call(math.random(2+extra_time,3+extra_time), discard)
+		end
+	else
+		delay_call(math.random(2+extra_time,3+extra_time), discard)
+	end
+end
+
+function server_msg.resMJNotifyPlayerOpt(msg)
 	if msg.seatid == robot_info.seatid then
 		if msg.opts then
 			if msg.opts[1].opttype == OPT_TYPE.DRAW or msg.opts[1].opttype == OPT_TYPE.DRAW_REVERSE and msg.opts[1].cards then
-				last_tile = msg.opts[1].cards[1]
-				-- if robot_info.must_win then
-				-- 	LOG_WARNING("robot[%d] draw[%d]", robot_info.uid, last_tile)
-				-- end
-				--第一轮需要额外延迟几秒
-				local extra_time = 0
-				if not next(table_tiles) then
-					extra_time = 3
-				end
-				if check_win() then
-					delay_call(math.random(2+extra_time,3+extra_time), win)
-				elseif not robot_info.must_win then
-					table.insert(robot_info.tiles, last_tile)
-					local an_gang_tile = check_an_gang()
-					if an_gang_tile then
-						delay_call(math.random(1+extra_time,2+extra_time), player_opt_req, {opttype=OPT_TYPE.BLACK_GANG, cards={an_gang_tile}})
-					elseif check_peng_gang(last_tile) then
-						delay_call(math.random(1+extra_time,2+extra_time), player_opt_req, {opttype=OPT_TYPE.PENG_GANG, cards={last_tile}})
-					else
-						delay_call(math.random(2+extra_time,3+extra_time), discard)
-					end
-				else
-					delay_call(math.random(2+extra_time,3+extra_time), discard)
-				end
+				
 			elseif msg.opts[1].opttype == OPT_TYPE.DISCARD then
 				delay_call(math.random(2,3), discard)
 			else
@@ -365,7 +383,7 @@ function server_msg.GameResult(msg)
 	
 end
 
-function server_msg.MJPlayerOptReq(msg)
+function server_msg.reqMJPlayerOpt(msg)
 	-- body
 end
 
@@ -384,6 +402,7 @@ end
 
 function server_msg.StartRound(msg)
 	-- body
+	LOG_DEBUG("机器人收到了局数开始的命令StartRound")
 end
 
 function server_msg.MJGameEnd(msg)
@@ -396,8 +415,14 @@ function server_msg.GameStart(msg)
 	-- body
 end
 
-
-function server_msg.SitdownNtf(msg)
+--[[
+    @desc: 收到服務器的坐下命令後隨機1到2秒進行機器人的準備
+    author:{author}
+    time:2019-01-01 01:14:46
+    --@msg: 
+    @return:
+]]
+function server_msg.resSitDown(msg)
 	LOG_DEBUG("SitdownNtf")
 	if msg.uid and msg.uid == robot_info.uid then
 		robot_info.seatid = msg.seatid

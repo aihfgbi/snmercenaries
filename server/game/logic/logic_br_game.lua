@@ -1202,7 +1202,7 @@ function this.add_gold(p,gold,resaon)
 	p.gold = p.gold + gold
 	
 	--发送金币改变通知
-	send_to_all("game.UpdateGoldInGame", { uid = p.uid, goldadd = gold, gold = p.gold })
+	send_to_all("game.resUpdateGoldInGame", { uid = p.uid, goldadd = gold, gold = p.gold })
 end
 
 -- 发送房间信息

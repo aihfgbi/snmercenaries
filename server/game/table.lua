@@ -334,7 +334,7 @@ function CMD.dispatch(uid, name, msg)
                     end
                     p.hasCost = nil
                 end
-                skynet.fork(leave, p, nil, sid)
+                skynet.fork(leave, p, nil, nil,sid)
                 return
             end
             return "game.resLeaveTable", {uid = p.uid, result = 1000}
@@ -532,6 +532,12 @@ function api.send_except(name, msg, except_uid)
     end
 end
 
+--[[
+    @desc: 游戏开始的函数，在logic里面调用，作用是初始化牌局记录
+    author:{author}
+    time:2019-01-01 20:14:42
+    @return:
+]]
 function api.game_start()
     hasstart = true
     for uid, p in pairs(players) do

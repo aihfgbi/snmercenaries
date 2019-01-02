@@ -13,6 +13,14 @@ enum MsgType {
     REQ_READY = 60007;//准备
     RES_READY = 70007;//准备返回
     RES_GAME_START = 70008;//遊戲開始
+    RES_UPDATE_GOLD_IN_GAME = 70009;//更新游戏内的金币变化，例如外部冲钱了，需要通知给用户客户端界面
+
+    //----------------麻将----------------------
+    RES_DEAL_CARD_MJ = 70030;//发牌
+    RES_DRAW_CARD_MJ = 70031//摸牌
+    RES_NOTIFY_PLAYER_OPT_MJ = 70032;//通知玩家操作
+    REQ_PLAYER_OPT_MJ = 60033;//玩家操作請求
+    RES_PLAYER_OPT_MJ = 70033;//玩家操作返回
     RES_RESUME_MJ = 71005;//麻将重连信息
 }
 
@@ -114,10 +122,96 @@ message resReady {
 
 //RES_GAME_START = 70008;//游戏开始
 message resGameStart {
-    optional int32 endtime = 1;
+}
+
+//RES_UPDATE_GOLD_IN_GAME=70009通用的,用于更新游戏内的金币变化，例如外部冲钱了，需要通知给用户客户端界面
+message resUpdateGoldInGame {
+    required int32 uid = 1; 
+    required int32 goldadd = 2; //本次金币变化，可为负值表示扣钱
+    required int32 gold = 3; //变化后剩余的金币量
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------
+//***************************** 以下是麻将协议 ***********************//
+//RES_DEAL_CARD = 70030;//发牌
+message resMJDealCard {
+    optional int32 banker = 1;     //庄家座位号
+    optional int32 cardnum = 2;    //牌的數量
+    repeated int32 dices = 3;      //骰子
+    repeated int32 shifter = 4;        //鬼牌
+    repeated int32 cards = 5;       //手牌
+}
+
+//RES_DRAW_CARD_MJ = 70031//摸牌
+//广播给其他人没有牌，只有数量
+message resMJDrawCard {
+    optional int32 card = 1;//牌
+    optional int32 cardnum = 2;//剩余牌数量
+}
+
+//牌的数据和操作类型
+message Opt {
+    required int32 opttype = 1;//操作类型
+    repeated int32 cards = 2;//操作的牌
+}
+
+//RES_NOTIFY_PLAYER_OPT_MJ = 70032;//通知玩家操作
+//玩家操作通知( 打牌1 吃3 碰4 杠567)
+//如果opts为空表示广播给其他玩家更新位置和时间
+//如果seatid为-1表示是吃碰杠的广播只更新时间
+//opttype为1的时候没有牌信息
+message resMJNotifyPlayerOpt {
+    required int32 seatid = 1;  //操作座位号       
+    optional int32 timeout = 2;//倒计时
+    repeated Opt opts = 3; //操作信息
+}
+
+//REQ_PLAYER_OPT_MJ = 60033;//玩家操作請求
+message reqMJPlayerOpt {
+    optional Opt opts = 1;
+}
+
+//RES_PLAYER_OPT_MJ = 70033;//玩家操作返回
+message resMJPlayerOpt {
+    optional Opt opts = 1;
+    optional int32 fromSeatid = 2;  //来源
+    optional int32 toSeatid = 3;    //去向
+    optional int32 areaid = 4;      //牌的位置 1手中 2吃碰杠 3打出去
+    optional int32 result = 5; //错误码待编辑
+}
+
+//RES_RESUME_MJ = 71005;//麻将重连信息
+//这个还没整理
+message MJResume {
+    message tilesinfo {
+        required int32 uid = 1;
+        required int32 tilenum = 2; //手牌数量
+        repeated int32 tiles = 3;  //手牌 若为其他人则为空
+        repeated int32 chi = 4;
+        repeated int32 peng = 5;
+        repeated int32 minggang = 6;
+        repeated int32 angang = 7;  //暗杠，若是自己传牌 否则为-1
+        repeated int32 desk = 8;    //已经出的牌
+        required int32 seatid = 9; //座位号
+    }
+    message Opt {
+        required int32 opttype = 1;
+        repeated int32 cards = 2;
+    }
+    required int32 status = 1;  //当前状态
+    optional int32 time = 2;    //当前状态剩余时间
+    optional int32 curuid = 3;  //当前操作人
+    repeated tilesinfo tiles = 4;  //玩家手牌
+    optional int32 tile = 5;  //摸到的牌
+    //6和7只有在status为等待玩家吃碰杠 且当前操作玩家正是自己时才有效
+    optional int32 seatid = 6; //出牌人的座位
+    repeated Opt opts = 7; 
+    optional int32 leftCard = 8;        //剩余牌的数量
+    optional int32 banker = 9;          //当前庄家
+    repeated int32 shifter = 10;        //鬼牌
+    repeated int32 dices = 11;          //筛子
+}
+
 message UserOffline {
     required int32 uid = 1;
 }
@@ -221,62 +315,7 @@ message BRMasterList {
 
 //***************************** 以下是麻将协议 ***********************//
 
-//麻将桌信息
-message MJGameInfo {
-    optional int32 banker = 1;     //庄家座位号
-    optional int32 leftCard = 2;      //剩余牌数
-    repeated int32 dices = 3;          //骰子
-    optional int32 lastSeatid = 4;    //操作的上家
-    optional int32 lastCard = 5;      //操作的上家的牌
-    optional int32 winType = 6;       //1自摸胡
-    optional int32 hitNum = 7;        //抓鸟个数
-    optional int32 redCard = 8;       //红中癞子
-    optional int32 trumpCard = 9;     //258做将
-    optional int32 sevenCard = 10;    //胡7对
-    optional int32 handCount = 11;
-    optional int32 gameNum = 12;      //总局数
-    optional int32 duration = 13;
-    optional int32  startTime = 14;
-    optional int32  baseScore = 15;
-    optional int32 hitOffset = 16;
-    optional int32 gameStartTime = 17;
-    optional int32 chips = 18;
-    optional int32 settle = 19;
-    repeated int32 askers = 20; //请求结束牌局玩家
-    optional int32 oneColor = 21; //清一色
-    optional int32 duiduihu  = 22; //对对胡
-    optional int32 bonusDouble = 23; //抓鸟翻倍
-    repeated int32 shifter = 24;        //鬼牌
-}
 
-//发牌
-message MJCardMove {
-    repeated int32 cards = 1;
-    optional int32 fromSeatid = 2;  //来源 正常摸牌是等于to_seatid等于玩家的seatid
-    optional int32 toSeatid = 3;      //去向
-    optional int32 areaid = 4;         //牌的位置 1手中 2吃碰杠 3打出去
-    optional int32 opttype = 5;        //玩家操作
-}
-
-//玩家操作通知
-message MJPlayerOpt {
-    message Opt {
-        required int32 opttype = 1;
-        repeated int32 cards = 2;
-    }
-    required int32 seatid = 1;         
-    optional int32 timeout = 2;
-    repeated Opt opts = 3;
-}
-
-//玩家操作
-message MJPlayerOptReq {
-    message Opt {
-        required int32 opttype = 1;
-        repeated int32 cards = 2;
-    }
-    optional Opt opts = 1;
-}
 
 //发给玩家
 message MJPlayerOptRep {
@@ -351,34 +390,7 @@ message MJGameStop {
     repeated info infos = 2;
 }
 
-message MJResume {
-    message tilesinfo {
-        required int32 uid = 1;
-        required int32 tilenum = 2; //手牌数量
-        repeated int32 tiles = 3;  //手牌 若为其他人则为空
-        repeated int32 chi = 4;
-        repeated int32 peng = 5;
-        repeated int32 minggang = 6;
-        repeated int32 angang = 7;  //暗杠，若是自己传牌 否则为-1
-        repeated int32 desk = 8;    //已经出的牌
-    }
-    message Opt {
-        required int32 opttype = 1;
-        repeated int32 cards = 2;
-    }
-    required int32 status = 1;  //当前状态
-    optional int32 time = 2;    //当前状态剩余时间
-    optional int32 curuid = 3;  //当前操作人
-    repeated tilesinfo tiles = 4;  //玩家手牌
-    optional int32 tile = 5;  //摸到的牌
-    //6和7只有在status为等待玩家吃碰杠 且当前操作玩家正是自己时才有效
-    optional int32 seatid = 6; //出牌人的座位
-    repeated Opt opts = 7; 
-    optional int32 leftCard = 8;        //剩余牌的数量
-    optional int32 banker = 9;          //当前庄家
-    repeated int32 shifter = 10;        //鬼牌
-    repeated int32 dices = 11;          //筛子
-}
+
 
 message GoldPool{
     required int32 goldpool=1;
@@ -425,12 +437,7 @@ message MJGMSetNextCard{
     required int32 card = 1;
 }
 
-//通用的,用于更新游戏内的金币变化，例如外部冲钱了，需要通知给用户客户端界面
-message UpdateGoldInGame {
-    required int32 uid = 1; 
-    required int32 goldadd = 2; //本次金币变化，可为负值表示扣钱
-    required int32 gold = 3; //变化后剩余的金币量
-}
+
 
 message CompareScore{
     optional int32 times1 = 1;//比倍类型1：半倍，2：比倍

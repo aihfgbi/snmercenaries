@@ -56,7 +56,7 @@ local _table_index
 
 local WAIT_DEAL = 20           --等待客户端请求发牌协议超时时间
 local _deal_tiles_time          --超时发牌的时间点
-local _request_deal = {}    --请求发牌的玩家
+local _request_deal = {}    --请求发牌的玩家，这个功能现在并没有用到
 
 local _bit_to_play_type = {     --二进制位数对应玩法
     "qiangganghu",
@@ -909,11 +909,11 @@ local function deal_tiles()
     --    LOG_DEBUG("[%d] tiles[%s]", v.uid, str)
         osapi.tsort(v.tiles)
 --        PRINT_T(v.tiles)
-        v:send_msg("game.MJCardMove", {cards       = v.tiles,
-                                        fromSeatid = v.seatid,
-                                        toSeatid   = v.seatid,
-                                        areaid      = TILE_AREA.HAND,
-                                        opttype     = OPT_TYPE.DRAW
+        v:send_msg("game.resDealCard", { cards  = v.tiles,
+                                        banker = _banker_seatid,
+                                        cardnum = #_wall,
+                                        dices = _dices,
+                                        shifter = {SHIFTER1, SHIFTER2}
                                         })
     end
     
@@ -1036,10 +1036,9 @@ local function player_drow()
     --     LOG_DEBUG("PLAYER :%s win all, last draw tile : %s", tostring(p.uid), tostring(tile))
     --     osapi.tinsert(opts, {opttype=OPT_TYPE.WIN, cards={tile}})
     -- end
-    local timeout = TIME.OPT_TIME/100
-    p:send_msg("game.MJPlayerOpt", {seatid=_opt_seatid, timeout=timeout, opts=opts})
-  --  _tapi.send_to_all("game.MJPlayerOpt", {seatid=_opt_seatid, timeout=timeout, opts={{opttype = OPT_TYPE.DRAW}}})
-    _tapi.send_except("game.MJPlayerOpt", {seatid=_opt_seatid, timeout=timeout, opts={{opttype = draw_type}}}, p.uid)
+
+    p:send_msg("game.resMJDrawCard", {card = tile, cardnum = #_wall})
+    _tapi.send_except("game.resMJDrawCard", {cardnum = #_wall}, p.uid)
     change_game_status()
 end
 
@@ -1071,6 +1070,12 @@ end
 --     end
 -- end
 
+--[[
+    @desc: 检测是否有机器人
+    author:{author}
+    time:2019-01-01 20:20:49
+    @return:
+]]
 local function has_robot()
     if _isUseGold then
         for _,p in pairs(_players_sit) do
@@ -1097,7 +1102,7 @@ local function new_game()
     _opt_seatid = get_next_opter()
     random_dices()
 --    _genzhuang = true
-    _tapi.send_to_all("game.StartRound", { round = _played_times + 1, total = _max_times })
+    -- _tapi.send_to_all("game.StartRound", { round = _played_times + 1, total = _max_times })
     --测试用
     -- if _isUseGold then
     --     random_gamewinner()
@@ -1114,8 +1119,7 @@ local function new_game()
         dices = _dices,
         shifter = {SHIFTER1, SHIFTER2},
     }
- --   PRINT_T(msg)
-    _tapi.send_to_all("game.MJGameInfo", msg)
+
     _deal_tiles_time = osapi.os_time() + WAIT_DEAL
 end
 
@@ -1127,11 +1131,10 @@ local function ask_player_discard(p)
 
     _last_timer_start = skynet.now()
  
-    p:send_msg("game.MJPlayerOpt", {seatid  = _opt_seatid,
-                                     timeout = TIME.OPT_TIME/100,
-                                     opts    = {{opttype=OPT_TYPE.DISCARD}}})
-
-    LOG_DEBUG("ask_player_discard")
+    p:send_msg("game.resMJNotifyPlayerOpt", {seatid = _opt_seatid,timeout = TIME.OPT_TIME/100,opts = {{opttype=OPT_TYPE.DISCARD}}})
+    _tapi.send_except("game.resMJNotifyPlayerOpt", {seatid=_opt_seatid, timeout=TIME.OPT_TIME/100, opts={}}, p.uid)
+    
+     LOG_DEBUG("ask_player_discard=".._opt_seatid..",id="..p.uid)
     change_game_status(MJ_STATUS.WAITING_PLAYER)
 end
 
@@ -1272,6 +1275,16 @@ local function set_ming_gang_score(p, lose_seatid)
     deal_gold(gold_changed)
 end
 
+--[[
+    @desc: 吃碰杠移动手牌的函数
+    author:{author}
+    time:2018-12-31 21:58:27
+    --@p: 玩家
+	--@tiles: 操作的牌
+	--@cnt: 操作的数量
+	--@opttype: 操作的类型
+    @return:
+]]
 local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
     LOG_DEBUG("player move tiles to hold opttype = %s, cnt =%s", tostring(opttype), tostring(cnt))
     if not p or not tiles then 
@@ -1339,11 +1352,17 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
         p.round_an_gang = p.round_an_gang + 1
     end
 
-    _tapi.send_to_all("game.MJCardMove", {cards       = cards,
-                                        fromSeatid = _last_discard_seatid,
-                                        toSeatid   = p.seatid,
-                                        areaid      = TILE_AREA.HOLD,
-                                        opttype     = opttype})
+    _tapi.send_to_all(
+        "game.resMJPlayerOpt",
+        {
+            cards = cards,
+            fromSeatid = _last_discard_seatid,
+            toSeatid = p.seatid,
+            areaid = TILE_AREA.HOLD,
+            opttype = opttype
+        }
+    )
+
 
     return true
 end
@@ -1398,14 +1417,17 @@ local function discard(p, tile)
     -- end
     _last_discard_tile   = tile
     _last_discard_seatid = p.seatid
-    local msg = { cards      = {tile},
-                                        fromSeatid = p.seatid,
-                                        toSeatid   = p.seatid,
-                                        areaid      = TILE_AREA.DISCARD,
-                                        opttype     = OPT_TYPE.DISCARD
-                                        }
+    local msg = {
+        cards = {tile},
+        fromSeatid = p.seatid,
+        toSeatid = p.seatid,
+        areaid = TILE_AREA.DISCARD,
+        opttype = OPT_TYPE.DISCARD
+    }
+
 --    PRINT_T(msg)
-    _tapi.send_to_all("game.MJCardMove", msg)
+    _tapi.send_to_all("game.resMJPlayerOpt", msg)
+
     _discard_cnt = _discard_cnt + 1
     -- if _genzhuang and _discard_cnt > 4 then
     --     _genzhuang = false
@@ -1457,27 +1479,43 @@ local function player_an_gang(p, tile)
     local cards = {tile, tile, tile, tile}
 
     p.hold_tiles = p.hold_tiles or {}
-    osapi.tinsert(p.hold_tiles, {cards       = cards,
-                            opttype     = OPT_TYPE.BLACK_GANG,
-                            from_seatid = p.seatid
-                            })
-    for _,user in pairs(_players_sit) do
-        if user.uid == p.uid then
-            user:send_msg("game.MJCardMove", {cards      = cards,
-                                             fromSeatid = p.seatid,
-                                             toSeatid   = p.seatid,
-                                             areaid      = TILE_AREA.HOLD,
-                                             opttype     = OPT_TYPE.BLACK_GANG
-                                         })
-        else
-            user:send_msg("game.MJCardMove", {cards      = {},
-                                             fromSeatid = p.seatid,
-                                             toSeatid   = p.seatid,
-                                             areaid      = TILE_AREA.HOLD,
-                                             opttype     = OPT_TYPE.BLACK_GANG
-                                         })
-        end
-    end
+    osapi.tinsert(
+        p.hold_tiles,
+        {
+            cards = cards,
+            opttype = OPT_TYPE.BLACK_GANG,
+            from_seatid = p.seatid
+        }
+    )
+
+    _tapi.send_to_all(
+        "game.resMJPlayerOpt",
+        {
+            cards = cards,
+            fromSeatid = p.seatid,
+            toSeatid = p.seatid,
+            areaid = TILE_AREA.HOLD,
+            opttype = OPT_TYPE.BLACK_GANG
+        }
+    )
+
+    -- for _,user in pairs(_players_sit) do
+    --     if user.uid == p.uid then
+    --         user:send_msg("game.MJCardMove", {cards      = cards,
+    --                                          fromSeatid = p.seatid,
+    --                                          toSeatid   = p.seatid,
+    --                                          areaid      = TILE_AREA.HOLD,
+    --                                          opttype     = OPT_TYPE.BLACK_GANG
+    --                                      })
+    --     else
+    --         user:send_msg("game.MJCardMove", {cards      = {},
+    --                                          fromSeatid = p.seatid,
+    --                                          toSeatid   = p.seatid,
+    --                                          areaid      = TILE_AREA.HOLD,
+    --                                          opttype     = OPT_TYPE.BLACK_GANG
+    --                                      })
+    --     end
+    -- end
    
     
     insert_last_draw_tile(p)
@@ -1654,12 +1692,17 @@ local function peng_gang()
 
             v.opttype = OPT_TYPE.PENG_GANG
             osapi.tinsert(v.cards, t)
-            _tapi.send_to_all("game.MJCardMove", {cards       = v.cards,
-                                                fromSeatid = v.from_seatid,
-                                                toSeatid   = p.seatid,
-                                                areaid      = TILE_AREA.HOLD,
-                                                opttype     = OPT_TYPE.PENG_GANG
-                                                })
+            _tapi.send_to_all(
+                "game.resMJPlayerOpt",
+                {
+                    cards = v.cards,
+                    fromSeatid = v.from_seatid,
+                    toSeatid = p.seatid,
+                    areaid = TILE_AREA.HOLD,
+                    opttype = OPT_TYPE.PENG_GANG
+                }
+            )
+
             
             insert_last_draw_tile(p)
 
@@ -1881,14 +1924,10 @@ local function ask_player_claim(seatid, info)
     }
     _claim_cache_data = {seatid = seatid, opts = table.deepcopy(info)}
   --  PRINT_T(msg)
-    p:send_msg("game.MJPlayerOpt", msg)
+    p:send_msg("game.resMJNotifyPlayerOpt", msg)
 
     --通知其他玩家更新倒计时
-    for sid, v in pairs(_players_sit) do
-        if sid ~= seatid then
-            v:send_msg("game.MJPlayerOpt", {seatid=-1,timeout=timeout, opts={}})
-        end
-    end
+    _tapi.send_except("game.resMJNotifyPlayerOpt", {seatid=-1, timeout=timeout, opts={}}, p.uid)
     --------------
 end
 
@@ -2043,15 +2082,6 @@ function check_player_claim(now)
     end
     if next(claims) then
         order_claims_players(claims)
-    end
-end
-
-local function wait_others(seatid)
-    if seatid then
-        local p = _players_sit[seatid]
-        if p then
-            p:send_msg("game.MJPlayerOptRep", {result = 1})
-        end
     end
 end
 
@@ -2554,12 +2584,12 @@ local function free_table(reason)
 end
 
 -------------------------------------状态处理函数-----------------------------
-local function deal_waiting_start()
+local function deal_waiting_start()--会在update里面一直执行直到可以开始
 --    LOG_DEBUG("deal_waiting_start")
     if check_start() then
         _has_start = true
      --   _played_times = 0
-        _tapi.send_to_all("game.GameStart", {})
+        _tapi.send_to_all("game.resGameStart", {})
         _tapi.game_start()
         change_game_status()
     end
@@ -2592,7 +2622,7 @@ local function deal_waiting_player(now)
     local p = _players_sit[_opt_seatid]
     if is_trusteeship(p) then
         if p.last_draw_tile and mj_deal.check_win_all(p.tiles, p.last_draw_tile) then 
-            client.MJPlayerOptReq( p, {opts={opttype=OPT_TYPE.WIN,cards={}}} )
+            client.reqMJPlayerOpt( p, {opts={opttype=OPT_TYPE.WIN,cards={}}} )
         else
             if not _discard_cnt or _discard_cnt == 0 then
                 if now - _last_timer_start < 300 then
@@ -2638,7 +2668,7 @@ local function deal_waiting_claim_player()
         if _claim_cache_data and _claim_cache_data.seatid == p.seatid then
             for _, v in ipairs(_claim_cache_data.opts) do
                 if v.opttype == OPT_TYPE.WIN or v.opttype == OPT_TYPE.QIANG_GANG_WIN then
-                    client.MJPlayerOptReq( p, {opts={opttype=v.opttype, cards={}}} )
+                    client.reqMJPlayerOpt( p, {opts={opttype=v.opttype, cards={}}} )
                     return
                 end
             end
@@ -2757,6 +2787,8 @@ local function auto_sitdown(p)
             end
             LOG_DEBUG("auto sit down success")
             p.kick_timeout = osapi.os_time() + KICK_TIMEOUT
+            --這裏發送了坐下是因为需要让机器人收到命令并进行准备
+            _tapi.send_to_all("game.resSitDown", { uid = p.uid, seatid = i, nickname = p.nickname, headimg = p.headimg or "" })
             break
         end
     end
@@ -2872,7 +2904,7 @@ function client.reqReady( p, msg )
     p:send_msg("game.resReady", { uid = p.uid, seatid = -1, result = 1 })
 end
 
-function client.MJPlayerOptReq( p, msg )
+function client.reqMJPlayerOpt( p, msg )
     LOG_DEBUG("player[%d] opt[%d]", p.uid, msg.opts.opttype)
     local opttype = msg.opts.opttype
     local cards = msg.opts.cards
@@ -2899,7 +2931,7 @@ function client.MJPlayerOptReq( p, msg )
         return false
     end
 
-    if check_status(MJ_STATUS.WAITING_CLAIM_PLAYER) then
+    if check_status(MJ_STATUS.WAITING_CLAIM_PLAYER) then --等待玩家操作的情况下
         _claim_cache_data = nil
         if opttype ~= OPT_TYPE.PASS and not check_opt(p.info, opttype) then
             LOG_DEBUG("illegal opt[%s] from player[%d]", tostring(opttype), p.uid)
@@ -2907,7 +2939,7 @@ function client.MJPlayerOptReq( p, msg )
         end
         if opttype == OPT_TYPE.PASS then
             player_claim_give_up(p.seatid)
-        elseif opttype == OPT_TYPE.WIN then
+        elseif opttype == OPT_TYPE.WIN then --点炮
             -- clear_claim_players()
             -- if _qianggang_info then
             --     player_win_all(p)
@@ -2941,7 +2973,7 @@ function client.MJPlayerOptReq( p, msg )
         end
     end
 
-    if check_status(MJ_STATUS.WAITING_PLAYER) then
+    if check_status(MJ_STATUS.WAITING_PLAYER) then --等待玩家出牌的情况下
         if opttype == OPT_TYPE.DISCARD then
             discard(p, cards[1])
         elseif opttype == OPT_TYPE.BLACK_GANG then
@@ -2949,7 +2981,7 @@ function client.MJPlayerOptReq( p, msg )
             player_an_gang(p, cards[1])
         elseif opttype == OPT_TYPE.PENG_GANG then
             player_peng_gang(p, cards[1])
-        elseif opttype == OPT_TYPE.WIN then
+        elseif opttype == OPT_TYPE.WIN then --自摸
             player_win_all(p)
         end
     end
@@ -3023,12 +3055,21 @@ function mj_logic.dissolve_table()
     end
 end
 
-function mj_logic.add_gold( p, gold, reason )
+--[[
+    @desc: 外部更新遊戲內部的金幣变化
+    author:{author}
+    time:2019-01-02 21:04:30
+    --@p:
+	--@gold:
+	--@reason: 
+    @return:
+]]
+function mj_logic.update_gold( p, gold, reason )
     p.gold = p.gold + gold
     if p.gold < 0 then
         p.gold = 0
     end
-    _tapi.send_to_all("game.UpdateGoldInGame", { uid = p.uid, goldadd = gold, gold = p.gold })
+    _tapi.send_to_all("game.resUpdateGoldInGame", { uid = p.uid, goldadd = gold, gold = p.gold })
 end
 
 function mj_logic.sitdown( p, seatid )
