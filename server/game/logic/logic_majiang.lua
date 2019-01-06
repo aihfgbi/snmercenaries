@@ -1355,11 +1355,12 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
     _tapi.send_to_all(
         "game.resMJPlayerOpt",
         {
-            cards = cards,
+            opts = {opttype = opttype,cards = cards},
             fromSeatid = _last_discard_seatid,
             toSeatid = p.seatid,
             areaid = TILE_AREA.HOLD,
-            opttype = opttype
+            optcard = _last_discard_tile,
+            handnum = #p.tiles
         }
     )
 
@@ -1418,11 +1419,12 @@ local function discard(p, tile)
     _last_discard_tile   = tile
     _last_discard_seatid = p.seatid
     local msg = {
-        cards = {tile},
+        opts = {opttype = OPT_TYPE.DISCARD,cards = {tile}},
         fromSeatid = p.seatid,
         toSeatid = p.seatid,
         areaid = TILE_AREA.DISCARD,
-        opttype = OPT_TYPE.DISCARD
+        optcard = tile,
+        handnum = #p.tiles
     }
 
 --    PRINT_T(msg)
@@ -1491,11 +1493,12 @@ local function player_an_gang(p, tile)
     _tapi.send_to_all(
         "game.resMJPlayerOpt",
         {
-            cards = cards,
+            opts = {opttype = OPT_TYPE.BLACK_GANG,cards = cards},
             fromSeatid = p.seatid,
             toSeatid = p.seatid,
             areaid = TILE_AREA.HOLD,
-            opttype = OPT_TYPE.BLACK_GANG
+            handnum = #p.tiles,
+            optcard = tile
         }
     )
 
@@ -1695,11 +1698,12 @@ local function peng_gang()
             _tapi.send_to_all(
                 "game.resMJPlayerOpt",
                 {
-                    cards = v.cards,
+                    opts = {opttype = OPT_TYPE.PENG_GANG,cards = v.cards},
                     fromSeatid = v.from_seatid,
                     toSeatid = p.seatid,
                     areaid = TILE_AREA.HOLD,
-                    opttype = OPT_TYPE.PENG_GANG
+                    handnum = #p.tiles,
+                    optcard = t
                 }
             )
 
@@ -1871,12 +1875,17 @@ function players_win(p)
     local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile)
     local win_detail, win_fan = set_windetail_winfan(detail_info)
   
-    osapi.tinsert(winner_info, { seatid= p.seatid,
-                            handcards = p.tiles,
-                            angang    = get_an_gang(p),
-                            winDetail = win_detail,
-                            winFan = win_fan
-                        })  
+    osapi.tinsert(
+        winner_info,
+        {
+            seatid = p.seatid,
+            handcards = p.tiles,
+            angang = get_an_gang(p),
+            winDetail = win_detail,
+            winFan = win_fan
+        }
+    )
+
     osapi.tinsert(_last_winners, p.seatid)
     p.win_detail = win_detail
     p.win_fan = win_fan
@@ -3175,38 +3184,19 @@ function mj_logic.resume(p, is_resume)
             info.tiles = player.tiles
         end
         info.tiles = info.tiles or {}
-        info.chi = {}
-        info.peng = {}
-        info.minggang = {}
-        info.angang = {}
+        info.opts = {}
         info.desk = player.discards or {}
         for _,v in ipairs(player.hold_tiles or {}) do
-            if v.opttype == OPT_TYPE.CHI then
-                for _,v in ipairs(v.cards) do
-                    osapi.tinsert(info.chi, v)
-                end
-            elseif v.opttype == OPT_TYPE.PENG then
-                for _,v in ipairs(v.cards) do
-                    osapi.tinsert(info.peng, v)
-                end
-            elseif v.opttype == OPT_TYPE.LIGHT_GANG or v.opttype == OPT_TYPE.PENG_GANG then
-                osapi.tinsert(info.minggang, v.cards[1])
-            elseif v.opttype == OPT_TYPE.BLACK_GANG then
-                if player.uid == p.uid then
-                    osapi.tinsert(info.angang, v.cards[1])
-                else
-                    osapi.tinsert(info.angang, -1)
-                end
-            end
+            info.opts[#info.opts] = {opttype = v.opttype,cards = v.cards}
         end
         osapi.tinsert(tiles, info)
     end
     --在询问玩家吃碰杠阶段时 出牌人的seatId,和一些操作和卡牌信息
     local seatid
-    local opts
+    local myopts
     if check_status(MJ_STATUS.WAITING_CLAIM_PLAYER) and curuid == p.uid then
         seatid = _claim_cache_data.seatid
-        opts = _claim_cache_data.opts
+        myopts = _claim_cache_data.opts
     end
     local msg = {
         status = _game_status,
@@ -3215,14 +3205,14 @@ function mj_logic.resume(p, is_resume)
         tiles = tiles,
         tile = tile,
         seatid = seatid,
-        opts = opts or {},
+        myopts = myopts or {},
         banker = _banker_seatid or 0,
         leftCard = #_wall,
         shifter = {SHIFTER1, SHIFTER2},
         dices = _dices,
     }
  --   PRINT_T(msg)
-    p:send_msg("game.MJResume", msg)
+    p:send_msg("game.resMJResume", msg)
 --    _tapi.send_to_all("game.UserOnline", { uid = p.uid })
     -- if not is_resume and _isUseGold then
     --     auto_sitdown(p)

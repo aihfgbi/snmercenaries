@@ -791,6 +791,7 @@ function _M.set_rule_data(spec_cfg, rate_cfg)
 	_M.fan_ziyise 		= (rate_cfg.ziyise and rate_cfg.ziyise > 0) and rate_cfg.ziyise
 	_M.fan_shibaluohan 	= (rate_cfg.shibaluohan and rate_cfg.shibaluohan > 0) and rate_cfg.shibaluohan
 	_M.fan_wuguijiabei = (rate_cfg.wuguijiabei and rate_cfg.wuguijiabei > 0) and rate_cfg.wuguijiabei or nil
+	luadump(_M,"初始化倍率=")
 end
 
 function _M.init()

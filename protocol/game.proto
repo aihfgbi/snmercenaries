@@ -17,10 +17,11 @@ enum MsgType {
 
     //----------------麻将----------------------
     RES_DEAL_CARD_MJ = 70030;//发牌
-    RES_DRAW_CARD_MJ = 70031//摸牌
+    RES_DRAW_CARD_MJ = 70031;//摸牌
     RES_NOTIFY_PLAYER_OPT_MJ = 70032;//通知玩家操作
     REQ_PLAYER_OPT_MJ = 60033;//玩家操作請求
     RES_PLAYER_OPT_MJ = 70033;//玩家操作返回
+    RES_RESULT_MJ = 70034;//麻将结算
     RES_RESUME_MJ = 71005;//麻将重连信息
 }
 
@@ -147,6 +148,7 @@ message resMJDealCard {
 message resMJDrawCard {
     optional int32 card = 1;//牌
     optional int32 cardnum = 2;//剩余牌数量
+    optional int32 seatid = 3;//座位号
 }
 
 //牌的数据和操作类型
@@ -177,26 +179,44 @@ message resMJPlayerOpt {
     optional int32 fromSeatid = 2;  //来源
     optional int32 toSeatid = 3;    //去向
     optional int32 areaid = 4;      //牌的位置 1手中 2吃碰杠 3打出去
-    optional int32 result = 5; //错误码待编辑
+    optional int32 result = 5; //错误码待编辑,暂时没有这个字段
+    optional int32 handnum = 6; //手牌的数量
+    optional int32 optcard = 7; //操作的哪張牌
+}
+
+//RES_RESULT_MJ = 70034;//麻将结算
+message resMJResult {
+    message resInfo {
+        required int32 seatid = 1;
+        repeated int32 handcards = 2;//手牌
+        repeated Opt opts = 3;//吃碰槓的牌
+        //4和5只有赢的人有，其他人都是{}
+        repeated int32 windetail = 4;//胡牌的类型，对应HU_TYPE
+        repeated int32 winfan = 5;//番数，跟winDetail一一对应
+        required string nickname = 6;
+        required int32 uid = 7;
+        required string headimg = 8;
+        required int32 winscore = 9;//输赢分数
+        required int32 gangscore = 10;//杠分
+        required int64 gold = 11; //当前金币
+    }
+    repeated resInfo reslist = 1;//每个人的信息
+    optional int32 winType = 2;//赢的类型，对应WIN_TYPE
+    required int32 wincard = 3;            //赢的牌
+    required int32 loseSeatid = 4;        //点炮的座位号
+    repeated int32 horseTile = 5;          //马牌
+    repeated int32 hitTiles = 6;    //中马牌
 }
 
 //RES_RESUME_MJ = 71005;//麻将重连信息
-//这个还没整理
-message MJResume {
+message resMJResume {
     message tilesinfo {
         required int32 uid = 1;
         required int32 tilenum = 2; //手牌数量
-        repeated int32 tiles = 3;  //手牌 若为其他人则为空
-        repeated int32 chi = 4;
-        repeated int32 peng = 5;
-        repeated int32 minggang = 6;
-        repeated int32 angang = 7;  //暗杠，若是自己传牌 否则为-1
-        repeated int32 desk = 8;    //已经出的牌
-        required int32 seatid = 9; //座位号
-    }
-    message Opt {
-        required int32 opttype = 1;
-        repeated int32 cards = 2;
+        repeated int32 handcards = 3;  //手牌 若为其他人则为空
+        repeated Opt opts = 4; //吃碰杠的牌
+        repeated int32 desk = 5;    //已经出的牌
+        required int32 seatid = 6; //座位号
     }
     required int32 status = 1;  //当前状态
     optional int32 time = 2;    //当前状态剩余时间
@@ -205,12 +225,22 @@ message MJResume {
     optional int32 tile = 5;  //摸到的牌
     //6和7只有在status为等待玩家吃碰杠 且当前操作玩家正是自己时才有效
     optional int32 seatid = 6; //出牌人的座位
-    repeated Opt opts = 7; 
+    repeated Opt myopts = 7; //如果在吃碰杠的情况下，当前的操作信息
     optional int32 leftCard = 8;        //剩余牌的数量
-    optional int32 banker = 9;          //当前庄家
+    optional int32 banker = 9;          //当前庄家座位号
     repeated int32 shifter = 10;        //鬼牌
     repeated int32 dices = 11;          //筛子
 }
+
+
+
+
+
+
+
+
+
+
 
 message UserOffline {
     required int32 uid = 1;
@@ -317,50 +347,52 @@ message BRMasterList {
 
 
 
-//发给玩家
-message MJPlayerOptRep {
-    required int32 result = 1;
-}
+// //发给玩家
+// message MJPlayerOptRep {
+//     required int32 result = 1;
+// }
 
-//赢家信息
-message MJWinnersInfo {
-    message WinnerInfo {
-        required int32 seatid = 1;
-        repeated int32 handcards = 2;
-        repeated int32 angang = 3;
-        repeated int32 winDetail = 4;
-        repeated int32 winFan = 5;
-    }
 
-    repeated WinnerInfo winnerInfo = 1;    //赢家的信息
-    required int32 wincard = 2;            //赢的牌
-    required int32 loseSeatid = 3;        //点炮的座位号
-    required int32 winType = 4;
-    repeated int32 horseTile = 5;          //马牌
-}
 
-message MJShowCards {
-    message ShownCards {
-        required int32 seatid = 1;
-        repeated int32 handcards = 2;
-        repeated int32 angang = 3;
-    }
-    repeated ShownCards showncards = 1;
-}
+// //赢家信息
+// message MJWinnersInfo {
+//     message WinnerInfo {
+//         required int32 seatid = 1;
+//         repeated int32 handcards = 2;
+//         repeated int32 angang = 3;
+//         repeated int32 winDetail = 4;
+//         repeated int32 winFan = 5;
+//     }
 
-message MJGameEnd {
-    message Score {
-        required int32 seatid = 1;
-        optional int32 endScore = 2;
-        optional int32 gangScore = 3;
-        optional int32 genzhuangScore = 4;
-        optional int32 lianzhuangScore = 5;
-    }
+//     repeated WinnerInfo winnerInfo = 1;    //赢家的信息
+//     required int32 wincard = 2;            //赢的牌
+//     required int32 loseSeatid = 3;        //点炮的座位号
+//     required int32 winType = 4;
+//     repeated int32 horseTile = 5;          //马牌
+// }
 
-    optional int32 winType = 1;
-    repeated Score scores = 2;
-    repeated int32 hitTiles = 3;    //中马牌
-}
+// message MJShowCards {
+//     message ShownCards {
+//         required int32 seatid = 1;
+//         repeated int32 handcards = 2;
+//         repeated int32 angang = 3;
+//     }
+//     repeated ShownCards showncards = 1;
+// }
+
+// message MJGameEnd {
+//     message Score {
+//         required int32 seatid = 1;
+//         optional int32 endScore = 2;
+//         optional int32 gangScore = 3;
+//         optional int32 genzhuangScore = 4;
+//         optional int32 lianzhuangScore = 5;
+//     }
+
+//     optional int32 winType = 1;
+//     repeated Score scores = 2;
+//     repeated int32 hitTiles = 3;    //中马牌
+// }
 
 //***************************** 以上是麻将协议 ***********************//
 
