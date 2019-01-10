@@ -127,6 +127,7 @@ local _horse_tiles                  --马牌
 local _opt_seatid                   --操作的座位
 local _last_winners                     --上局的赢家
 local _last_losers                      --上局的输家
+local _lose_seatid                      --点炮的座位号
 local _last_scores                      --记录上局所有人输赢分数
 local _last_horse_tiles                 --上局抓码牌
 local _last_hit_tiles                       --上局中码的牌
@@ -1837,15 +1838,13 @@ local function player_win_all(p, qianggangtile)
             winFan = win_fan
         }
     }
-
+    _lose_seatid = p.seatid
     local msg = {   winnerInfo = winner_info,
                     wincard     = win_tile,
                     loseSeatid = p.seatid,
                     winType = _win_type,
                     horseTile = _horse_tiles}
---    PRINT_T(msg)
 
-    _tapi.send_to_all("game.MJWinnersInfo", msg)
     table.clear(_last_winners)
     _last_winners = {p.seatid}
     _last_losers = {}
@@ -1903,13 +1902,10 @@ function players_win(p)
     
  --   loser.win_fan = total_fan 
     _last_losers = {_last_discard_seatid}
+    _lose_seatid = _last_discard_seatid
     _win_type = WIN_TYPE.OTHER
     _win_card = loser_tile
-    _tapi.send_to_all("game.MJWinnersInfo", { winnerInfo = winner_info,
-                                            wincard     = loser_tile,
-                                            loseSeatid = _last_discard_seatid,
-                                            winType = _win_type,
-                                            horseTile = _horse_tiles})
+
 
     change_game_status(MJ_STATUS.GAME_END)
 end
@@ -2116,7 +2112,7 @@ function show_lose_cards()
                                 })
     end
     
-    _tapi.send_to_all("game.MJShowCards",{showncards = showncards})
+    --_tapi.send_to_all("game.MJShowCards",{showncards = showncards})
 end
 
 --连庄分数
@@ -2355,43 +2351,6 @@ function check_table_end()
 
 end
 
--- function create_game_end_info()
-    -- local players = {}
-    -- local scores = {}
-    -- for k,v in pairs(_players_sit) do
-    --     local player_info = {uid = v.uid}
-        
-    --     if _current_scores[v.seatid] then
-    --         player_info.end_score = _current_scores[v.seatid].end_score or 0
-    --         player_info.hit_score = _current_scores[v.seatid].hit_score or 0
-    --         player_info.gang_score = _current_scores[v.seatid].gang_score or 0
-    --         if _bonus_double and _bonus_double > 0 then
-    --             player_info.score = player_info.end_score + player_info.gang_score
-    --         else
-    --             player_info.score = player_info.end_score + player_info.hit_score + player_info.gang_score
-    --         end
-    --         v.score = v.score or 0 + player_info.score
-    --     end
-
-    --     -- players[#players+1] = player_info
-    --     -- osapi.tinsert(scores, {seatid = k, 
-    --     --                  endScore = player_info.end_score,
-    --     --                  hitScore = player_info.hit_score,
-    --     --                  gangScore = player_info.gang_score})
-    -- end
-    -- local game_info = {}
-    -- game_info.player_info = players
-    -- game_info.win_type = _last_win_type or 0
- --   game_info.hands_cnt = _hands_cnt
- --   game_info.video_time = osapi.os_time()-_last_game_start
-    -- logic.push_game_end(game_info)
-    -- _tapi.send_to_all("game.MJGameEnd", 
-    --                 { winType = _last_win_type,
-    --                   scores = scores,
-
-    --                 })
--- end
-
 local function excute_gold()
     local gold_changed = {win={},lose={}}
     for _, v in pairs(_current_scores) do
@@ -2432,43 +2391,58 @@ local function game_end()
     --录像用
     local end_rst = {players = {}, score = {}}
     local tmp_score = {}
+    local resinfo = {}
     local endScore = 0
     for i,v in ipairs(_current_scores) do
+        local player = _players_sit[i]
         if _isUseGold then
-            endScore = _players_sit[i].gold_change
+            endScore = player.gold_change
         else
             endScore = v.end_score
         end
-        tmp_score[i] = {
-            seatid = v.seatid,
-            endScore = endScore,
-            gangScore = v.gang_score,
-            genzhuangScore = v.genzhuang_score,
-            lianzhuangScore = v.lianzhuang_score or 0,
-        }
+        local info = {}
+        info.opts = {}
+        for k,cc in ipairs(player.hold_tiles or {}) do
+            info.opts[k] = {opttype = cc.opttype,cards = cc.cards}
+        end
+        info.seatid = v.seatid
+        info.handcards = player.tiles
+        info.windetail = player.win_detail or {}
+        info.winfan = player.win_fan or {}
+        info.nickname = player.nickname
+        info.uid = player.uid
+        info.headimg = player.headimg
+        info.winscore = endScore
+        info.gangscore = v.gang_score
+        info.gold = player.gold
+        -- tmp_score[i] = {
+        --     seatid = v.seatid,
+        --     endScore = endScore,
+        --     gangScore = v.gang_score,
+        --     genzhuangScore = v.genzhuang_score,
+        --     lianzhuangScore = v.lianzhuang_score or 0,
+        -- }
         osapi.tinsert(end_rst.players, _players_sit[v.seatid].nickname)
         local score = v.end_score + v.genzhuang_score + v.gang_score
         osapi.tinsert(end_rst.score, score)
+        osapi.tinsert(resinfo,info)
     end
-    local msg = {winType  = _win_type,
-                scores    = tmp_score,
-                hitTiles  = _last_hit_tiles}
+    local msg = {
+        reslist = resinfo,
+        winType = _win_type,
+        wincard = _win_card,
+        loseSeatid = _lose_seatid,
+        horseTile = _horse_tiles,
+        hitTiles = _last_hit_tiles
+    }
+
 --    PRINT_T(msg)
-    _tapi.send_to_all("game.MJGameEnd", msg)
-    
-    
-    _last_win_type = _win_type
-    
-    
- --   create_game_end_info()
-    
-    
+    _tapi.send_to_all("game.resMJResult", msg)
     
     _last_scores = _current_scores
     _current_scores = nil
     _has_robot = nil
-    _last_east_seatid = _east_seatid
-    _east_seatid = nil
+
     _played_times = _played_times + 1
     -- if _table_end > 0 then
     --     logic.table_end()
@@ -3187,7 +3161,7 @@ function mj_logic.resume(p, is_resume)
         info.opts = {}
         info.desk = player.discards or {}
         for _,v in ipairs(player.hold_tiles or {}) do
-            info.opts[#info.opts] = {opttype = player.opttype,cards = player.cards}
+            info.opts[#info.opts] = {opttype = v.opttype,cards = v.cards}
         end
         info.seatid = seatid
         osapi.tinsert(tiles, info)
