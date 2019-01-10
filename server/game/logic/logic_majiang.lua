@@ -3187,8 +3187,9 @@ function mj_logic.resume(p, is_resume)
         info.opts = {}
         info.desk = player.discards or {}
         for _,v in ipairs(player.hold_tiles or {}) do
-            info.opts[#info.opts] = {opttype = v.opttype,cards = v.cards}
+            info.opts[#info.opts] = {opttype = player.opttype,cards = player.cards}
         end
+        info.seatid = seatid
         osapi.tinsert(tiles, info)
     end
     --在询问玩家吃碰杠阶段时 出牌人的seatId,和一些操作和卡牌信息
@@ -3214,20 +3215,17 @@ function mj_logic.resume(p, is_resume)
  --   PRINT_T(msg)
     p:send_msg("game.resMJResume", msg)
 --    _tapi.send_to_all("game.UserOnline", { uid = p.uid })
-    -- if not is_resume and _isUseGold then
-    --     auto_sitdown(p)
-    -- end
 
     if is_trusteeship(p) then
         player_trusteeship(p, 0)
     end
 
     --解散房间的信息
-    if dissolve_timeout then
-        p:send_msg("game.PushDissolveTable", { consentUid = consent_dissolve_players, 
-                                                    refuseUid = refuse_dissolve_players,
-                                                    remaintime = dissolve_timeout - osapi.os_time()})
-    end
+    -- if dissolve_timeout then
+    --     p:send_msg("game.PushDissolveTable", { consentUid = consent_dissolve_players, 
+    --                                                 refuseUid = refuse_dissolve_players,
+    --                                                 remaintime = dissolve_timeout - osapi.os_time()})
+    -- end
 end
 
 function mj_logic.offline(p)
