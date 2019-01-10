@@ -83,5 +83,21 @@ local CMD = {
 	["70007"] = "game.resReady",
 	["game.resGameStart"] = 70008, --/游戏开始
 	["70008"] = "game.resGameStart",
+
+	--麻将
+	["game.resMJDealCard"] = 70030, --/发牌
+	["70030"] = "game.resMJDealCard",
+	["game.resMJDrawCard"] = 70031, --/摸牌
+	["70031"] = "game.resMJDrawCard",
+	["game.resMJNotifyPlayerOpt"] = 70032, --/通知玩家操作
+	["70032"] = "game.resMJNotifyPlayerOpt",
+	["game.reqMJPlayerOpt"] = 60033, --/玩家操作請求
+	["60033"] = "game.reqMJPlayerOpt",
+	["game.resMJPlayerOpt"] = 70033, --/玩家操作返回
+	["70033"] = "game.resMJPlayerOpt",
+	["game.resMJResult"] = 70034, --/麻将结算
+	["70034"] = "game.resMJResult",
+	["game.resMJResume"] = 71005, --/麻将重连信息
+	["71005"] = "game.resMJResume",
 }
 return CMD

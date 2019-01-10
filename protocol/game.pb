@@ -1,5 +1,5 @@
 
-Ø'
+ˇ#
 
 game.protogame"≤
 player
@@ -69,9 +69,81 @@ resSitDown
 resReady
 uid (
 seatid (
-result ("
-resGameStart
-endtime ("
+result ("
+resGameStart"A
+resUpdateGoldInGame
+uid (
+goldadd (
+gold ("_
+resMJDealCard
+banker (
+cardnum (
+dices (
+shifter (
+cards (">
+resMJDrawCard
+card (
+cardnum (
+seatid ("%
+Opt
+opttype (
+cards ("P
+resMJNotifyPlayerOpt
+seatid (
+timeout (
+opts (2	.game.Opt")
+reqMJPlayerOpt
+opts (2	.game.Opt"ë
+resMJPlayerOpt
+opts (2	.game.Opt
+
+fromSeatid (
+toSeatid (
+areaid (
+result (
+handnum (
+optcard ("‚
+resMJResult*
+reslist (2.game.resMJResult.resInfo
+winType (
+wincard (
+
+loseSeatid (
+	horseTile (
+hitTiles (À
+resInfo
+seatid (
+	handcards (
+opts (2	.game.Opt
+	windetail (
+winfan (
+nickname (	
+uid (
+headimg (	
+winscore	 (
+	gangscore
+ (
+gold ("◊
+resMJResume
+status (
+time (
+curuid (*
+tiles (2.game.resMJResume.tilesinfo
+tile (
+seatid (
+myopts (2	.game.Opt
+leftCard (
+banker	 (
+shifter
+ (
+dices (s
+	tilesinfo
+uid (
+tilenum (
+	handcards (
+opts (2	.game.Opt
+desk (
+seatid ("
 UserOffline
 uid ("
 
@@ -136,90 +208,7 @@ StartRound
 nickname (	
 sex (
 gold (
-headimg (	"∫
-
-MJGameInfo
-banker (
-leftCard (
-dices (
-
-lastSeatid (
-lastCard (
-winType (
-hitNum (
-redCard (
-	trumpCard	 (
-	sevenCard
- (
-	handCount (
-gameNum (
-duration (
-	startTime (
-	baseScore (
-	hitOffset (
-gameStartTime (
-chips (
-settle (
-askers (
-oneColor (
-duiduihu (
-bonusDouble (
-shifter ("b
-
-MJCardMove
-cards (
-
-fromSeatid (
-toSeatid (
-areaid (
-opttype ("z
-MJPlayerOpt
-seatid (
-timeout (#
-opts (2.game.MJPlayerOpt.Opt%
-Opt
-opttype (
-cards ("_
-MJPlayerOptReq&
-opts (2.game.MJPlayerOptReq.Opt%
-Opt
-opttype (
-cards (" 
-MJPlayerOptRep
-result ("
-MJWinnersInfo2
-
-winnerInfo (2.game.MJWinnersInfo.WinnerInfo
-wincard (
-
-loseSeatid (
-winType (
-	horseTile (b
-
-WinnerInfo
-seatid (
-	handcards (
-angang (
-	winDetail (
-winFan ("Ä
-MJShowCards0
-
-showncards (2.game.MJShowCards.ShownCards?
-
-ShownCards
-seatid (
-	handcards (
-angang ("ƒ
-	MJGameEnd
-winType (%
-scores (2.game.MJGameEnd.Score
-hitTiles (m
-Score
-seatid (
-endScore (
-	gangScore (
-genzhuangScore (
-lianzhuangScore ("
+headimg (	"
 DissolveTable
 opt ("^
 PushDissolveTable
@@ -240,32 +229,7 @@ MJGameStop
 winother (
 minggang (
 angang (
-score ("ê
-MJResume
-status (
-time (
-curuid ('
-tiles (2.game.MJResume.tilesinfo
-tile (
-seatid ( 
-opts (2.game.MJResume.Opt
-leftCard (
-banker	 (
-shifter
- (
-dices (É
-	tilesinfo
-uid (
-tilenum (
-tiles (
-chi (
-peng (
-minggang (
-angang (
-desk (%
-Opt
-opttype (
-cards ("
+score ("
 GoldPool
 goldpool ("+
 FishChangeBase
@@ -292,11 +256,7 @@ BRUserList(
 type (
 gold ("
 MJGMSetNextCard
-card (">
-UpdateGoldInGame
-uid (
-goldadd (
-gold (".
+card (".
 CompareScore
 times1 (
 times2 ("S
@@ -305,7 +265,7 @@ BRUserList(
 wingold (
 gold (
 owngold ("
-MJRequestDealTiles*ã
+MJRequestDealTiles*¡
 MsgType
 RES_TABLE_INFOÒ¢
 RES_ENTER_TABLEÚ¢
@@ -319,5 +279,12 @@ REQ_RESUMEÂ‘
 RES_CHATˆ¢
 	REQ_READYÁ‘
 	RES_READY˜¢
-RES_GAME_START¯¢
+RES_GAME_START¯¢
+RES_UPDATE_GOLD_IN_GAME˘¢
+RES_DEAL_CARD_MJé£
+RES_DRAW_CARD_MJè£
+RES_NOTIFY_PLAYER_OPT_MJê£
+REQ_PLAYER_OPT_MJÅ’
+RES_PLAYER_OPT_MJë£
+RES_RESULT_MJí£
 RES_RESUME_MJ›™
