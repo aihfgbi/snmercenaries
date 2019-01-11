@@ -257,6 +257,7 @@ function CMD.join(p)
         p:send_msg("hall.resQuickJoinGame", {result = 1, gameid = gameid, ismatch = ismatch or -1})
 
         local msg = logic.get_tableinfo(p)
+        luadump(msg,"get_tableinfo==")
         if msg then
             p:send_msg("game.resTableInfo", msg)
         end
