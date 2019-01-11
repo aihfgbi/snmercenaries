@@ -910,12 +910,17 @@ local function deal_tiles()
     --    LOG_DEBUG("[%d] tiles[%s]", v.uid, str)
         osapi.tsort(v.tiles)
 --        PRINT_T(v.tiles)
-        v:send_msg("game.resDealCard", { cards  = v.tiles,
-                                        banker = _banker_seatid,
-                                        cardnum = #_wall,
-                                        dices = _dices,
-                                        shifter = {SHIFTER1, SHIFTER2}
-                                        })
+        v:send_msg(
+            "game.resMJDealCard",
+            {
+                cards = v.tiles,
+                banker = _banker_seatid,
+                cardnum = #_wall,
+                dices = _dices,
+                shifter = {SHIFTER1, SHIFTER2}
+            }
+        )
+
     end
     
     --将胡牌所需的其他牌随机插入牌堆
@@ -1038,8 +1043,8 @@ local function player_drow()
     --     osapi.tinsert(opts, {opttype=OPT_TYPE.WIN, cards={tile}})
     -- end
 
-    p:send_msg("game.resMJDrawCard", {card = tile, cardnum = #_wall})
-    _tapi.send_except("game.resMJDrawCard", {cardnum = #_wall}, p.uid)
+    p:send_msg("game.resMJDrawCard", {card = tile, cardnum = #_wall,seatid = p.seatid})
+    _tapi.send_except("game.resMJDrawCard", {cardnum = #_wall,seatid = p.seatid}, p.uid)
     change_game_status()
 end
 
