@@ -86,7 +86,7 @@ OPT_TYPE = {
 TIME = {
 	OPT_TIME = 20 * 100,			--玩家操作时间 (15秒)
 	CLAIM_TIME = 20 * 100,					--等待吃、碰、杠、胡的时间
-	START_TIME = 5*100,
+	START_TIME = 1*100,
 	SETTLE_TIME = 10 * 100,		   --结算时间
 }
 
@@ -103,7 +103,8 @@ WIN_TYPE = {
 	OTHER = 2,      --点炮
 	DISBAND = 3,    --解散
 	GANG = 4,        --抢杠胡
-	GANGSHANGKAIHUA = 5		--杠上开花
+	GANGSHANGKAIHUA = 5,		--杠上开花
+	NOWINERS = 6    --流局
 }
 
 --十三幺牌型

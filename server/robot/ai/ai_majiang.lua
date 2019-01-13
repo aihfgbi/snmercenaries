@@ -405,7 +405,7 @@ function server_msg.StartRound(msg)
 	LOG_DEBUG("机器人收到了局数开始的命令StartRound")
 end
 
-function server_msg.MJGameEnd(msg)
+function server_msg.resMJResult(msg)
 	robot_info.tiles = nil
 	delay_call(math.random(5,10), get_ready)
 end

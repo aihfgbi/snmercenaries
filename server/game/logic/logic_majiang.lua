@@ -311,7 +311,7 @@ local function player_trusteeship(p, state)
         --     destroy_replace_robot(p)
         -- end
     end
-    _tapi.send_to_all("game.LandTrusteeship", {uid = p.uid, state = state})
+    -- _tapi.send_to_all("game.LandTrusteeship", {uid = p.uid, state = state})
 end
 
 local function set_play_type_info()
@@ -1000,8 +1000,21 @@ local function check_lianzhuang()
         else
             p.lianzhuang_cnt = 0
         end
-        LOG_DEBUG("[%d] lianzhuang_cnt [%d]", p.uid, p.lianzhuang_cnt)
+        -- LOG_DEBUG("[%d] lianzhuang_cnt [%d]", p.uid, p.lianzhuang_cnt)
     end
+end
+
+--要求玩家打牌
+local function ask_player_discard(p)
+    _opt_seatid = p.seatid
+
+    _last_timer_start = skynet.now()
+ 
+    p:send_msg("game.resMJNotifyPlayerOpt", {seatid = _opt_seatid,timeout = TIME.OPT_TIME/100,opts = {{opttype=OPT_TYPE.DISCARD}}})
+    _tapi.send_except("game.resMJNotifyPlayerOpt", {seatid=_opt_seatid, timeout=TIME.OPT_TIME/100, opts={}}, p.uid)
+    
+    --  LOG_DEBUG("ask_player_discard=".._opt_seatid..",id="..p.uid)
+    change_game_status(MJ_STATUS.WAITING_PLAYER)
 end
 
 --摸牌
@@ -1020,6 +1033,7 @@ local function player_drow()
     local draw_type = _drow_reverse and OPT_TYPE.DRAW_REVERSE or OPT_TYPE.DRAW
     LOG_DEBUG("player_drow player[%d] seatid[%d] tile[%s]", p.uid, _opt_seatid, tostring(tile)) 
     if not tile then
+        _win_type = WIN_TYPE.NOWINERS
         change_game_status(MJ_STATUS.GAME_END)
         return
     end
@@ -1045,6 +1059,7 @@ local function player_drow()
 
     p:send_msg("game.resMJDrawCard", {card = tile, cardnum = #_wall,seatid = p.seatid})
     _tapi.send_except("game.resMJDrawCard", {cardnum = #_wall,seatid = p.seatid}, p.uid)
+    _tapi.send_to_all("game.resMJNotifyPlayerOpt", {seatid = p.seatid,timeout = TIME.OPT_TIME/100,opts = {{opttype=OPT_TYPE.DISCARD}}})
     change_game_status()
 end
 
@@ -1131,19 +1146,6 @@ end
 
 -----------------------------------------------------------
 
---要求玩家打牌
-local function ask_player_discard(p)
-    _opt_seatid = p.seatid
-
-    _last_timer_start = skynet.now()
- 
-    p:send_msg("game.resMJNotifyPlayerOpt", {seatid = _opt_seatid,timeout = TIME.OPT_TIME/100,opts = {{opttype=OPT_TYPE.DISCARD}}})
-    _tapi.send_except("game.resMJNotifyPlayerOpt", {seatid=_opt_seatid, timeout=TIME.OPT_TIME/100, opts={}}, p.uid)
-    
-     LOG_DEBUG("ask_player_discard=".._opt_seatid..",id="..p.uid)
-    change_game_status(MJ_STATUS.WAITING_PLAYER)
-end
-
 --返回暗杠
 local function get_an_gang(p)
     local an_gang = {}
@@ -1201,7 +1203,7 @@ end
 
 
 local function set_an_gang_score(p)
-    LOG_DEBUG("set_an_gang_score %d",p.uid)
+    -- LOG_DEBUG("set_an_gang_score %d",p.uid)
     local p_score = _current_scores[p.seatid]
     local score_change = 0
     local gold_changed = {win={},lose={}}
@@ -1231,7 +1233,7 @@ local function set_an_gang_score(p)
 end
 
 local function set_peng_gang_score(p)
-    LOG_DEBUG("set_peng_gang_score %d",p.uid)
+    -- LOG_DEBUG("set_peng_gang_score %d",p.uid)
     local p_score = _current_scores[p.seatid]
     local score_change = 0
     local gold_changed = {win={},lose={}}
@@ -1260,7 +1262,7 @@ local function set_peng_gang_score(p)
 end
 
 local function set_ming_gang_score(p, lose_seatid)
-    LOG_DEBUG("set_ming_gang_score %d",p.uid)
+    -- LOG_DEBUG("set_ming_gang_score %d",p.uid)
     local p_score = _current_scores[p.seatid]
     local score_change = 0
     local gold_changed = {win={},lose={}}
@@ -1292,7 +1294,7 @@ end
     @return:
 ]]
 local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
-    LOG_DEBUG("player move tiles to hold opttype = %s, cnt =%s", tostring(opttype), tostring(cnt))
+    -- LOG_DEBUG("player move tiles to hold opttype = %s, cnt =%s", tostring(opttype), tostring(cnt))
     if not p or not tiles then 
         LOG_DEBUG("no player or no tiles p = %s", tostring(p))
         return 
@@ -1422,7 +1424,7 @@ local function discard(p, tile)
     -- if _genzhuang and _last_discard_tile and _last_discard_tile ~= tile then
     --     _genzhuang = false
     -- end
-    _last_discard_tile   = tile
+    _last_discard_tile = tile
     _last_discard_seatid = p.seatid
     local msg = {
         opts = {opttype = OPT_TYPE.DISCARD,cards = {tile}},
@@ -1444,7 +1446,7 @@ local function discard(p, tile)
         _qishouhu = false
     end
     _opt_seatid = get_next_seatid(_opt_seatid)
-    LOG_DEBUG("player[%d] seatid[%d] discard[%d]", p.uid, p.seatid, tile)
+    -- LOG_DEBUG("player[%d] seatid[%d] discard[%d]", p.uid, p.seatid, tile)
     p.minggang_seatid = nil
     change_game_status()
 end
@@ -1833,22 +1835,7 @@ local function player_win_all(p, qianggangtile)
     end
     
     _win_card = win_tile
-
-    local winner_info = {
-        {
-            seatid = p.seatid,
-            handcards = p.tiles,
-            angang = get_an_gang(p),
-            winDetail = win_detail,
-            winFan = win_fan
-        }
-    }
     _lose_seatid = p.seatid
-    local msg = {   winnerInfo = winner_info,
-                    wincard     = win_tile,
-                    loseSeatid = p.seatid,
-                    winType = _win_type,
-                    horseTile = _horse_tiles}
 
     table.clear(_last_winners)
     _last_winners = {p.seatid}
@@ -1869,35 +1856,17 @@ end
 function players_win(p)
     table.clear(_last_winners)
 
-    local winner_info = {}
-    local total_fan = {}
-
     p.win_cnt = p.win_cnt + 1
     p.round_win = p.round_win + 1
     p.catch_fire = p.catch_fire + 1
     p.round_catch_fire = p.round_catch_fire + 1
-    local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile)
     local win_detail, win_fan = set_windetail_winfan(detail_info)
-  
-    osapi.tinsert(
-        winner_info,
-        {
-            seatid = p.seatid,
-            handcards = p.tiles,
-            angang = get_an_gang(p),
-            winDetail = win_detail,
-            winFan = win_fan
-        }
-    )
+    local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile)
 
     osapi.tinsert(_last_winners, p.seatid)
     p.win_detail = win_detail
     p.win_fan = win_fan
-    osapi.tinsert(total_fan,win_fan)
 
-
-
-    -- local loser_seatid = _last_discard_seatid
     local loser_tile   = _last_discard_tile
     local loser = _players_sit[_last_discard_seatid]
     loser.lose_cnt = loser.lose_cnt + 1
@@ -1905,12 +1874,10 @@ function players_win(p)
     loser.fire = loser.fire + 1
     loser.round_fire = loser.round_fire + 1
     
- --   loser.win_fan = total_fan 
     _last_losers = {_last_discard_seatid}
     _lose_seatid = _last_discard_seatid
     _win_type = WIN_TYPE.OTHER
     _win_card = loser_tile
-
 
     change_game_status(MJ_STATUS.GAME_END)
 end
@@ -1925,7 +1892,7 @@ local function ask_player_claim(seatid, info)
     local p = _players_sit[seatid]
     p.info = info
 
-    LOG_DEBUG("ask player[%s] claim seatid[%d]", p.nickname, seatid)
+    -- LOG_DEBUG("ask player[%s] claim seatid[%d]", p.nickname, seatid)
 --    PRINT_T(info)
     local msg = {
         seatid  = seatid,
@@ -1933,7 +1900,7 @@ local function ask_player_claim(seatid, info)
         opts    = info
     }
     _claim_cache_data = {seatid = seatid, opts = table.deepcopy(info)}
-  --  PRINT_T(msg)
+   luadump(msg,"询问玩家吃碰杠")
     p:send_msg("game.resMJNotifyPlayerOpt", msg)
 
     --通知其他玩家更新倒计时
@@ -2005,10 +1972,10 @@ end
 
 --自动出牌
 local function auto_discard()
-    LOG_DEBUG("auto_discard cur_opt")
+    -- LOG_DEBUG("auto_discard cur_opt")
     assert(_opt_seatid)
     local p = _players_sit[_opt_seatid]
-    LOG_DEBUG("auto_discard cur player[%d] seatid[%d]", p.uid, _opt_seatid)
+    -- LOG_DEBUG("auto_discard cur player[%d] seatid[%d]", p.uid, _opt_seatid)
     if not p.isrobot then
         p.auto_out_cnt = p.auto_out_cnt + 1
     end
@@ -2070,11 +2037,13 @@ function check_player_claim(now)
 
             if CAN_GANG and mj_deal.check_kong(p.tiles, _last_discard_tile) then
                 claims[k] = claims[k] or {}
+                LOG_DEBUG("玩家可以杠===".._last_discard_tile)
                 opts = {opttype=OPT_TYPE.LIGHT_GANG, cards={_last_discard_tile}}
                 osapi.tinsert(claims[k], opts)
             end
 
             if CAN_PENG and mj_deal.check_pung(p.tiles, _last_discard_tile) then
+                LOG_DEBUG("玩家可以碰===".._last_discard_tile)
                 claims[k] = claims[k] or {}
                 opts = {opttype=OPT_TYPE.PENG, cards={_last_discard_tile}}
                 osapi.tinsert(claims[k], opts)
@@ -2083,6 +2052,7 @@ function check_player_claim(now)
             if CAN_CHI and p.seatid == (_last_discard_seatid % _game_cfg.max_player + 1) then
                 local chows = mj_deal.check_chow(p.tiles, _last_discard_tile)
                 if chows and #chows > 0 then
+                    LOG_DEBUG("玩家可以吃===".._last_discard_tile)
                      claims[k] = claims[k] or {}
                      opts = {opttype=OPT_TYPE.CHI, cards=chows}
                      osapi.tinsert(claims[k], opts)
@@ -2208,21 +2178,6 @@ local function set_end_scores()
 
         _current_scores[_last_losers[1]].end_score = lose_score
     end
-
-    -- if _win_type == WIN_TYPE.GANG then
-    --     local lose_score = 0
-    --     for _,seatid in ipairs(_last_winners) do
-    --         local winner = _players_sit[seatid]
-    --         local shifter_cnt = cal_shifter_cnt(winner.tiles)
-    --         local wuguifan = (base_rule_cfg.wuguijiabei > 0 and shifter_cnt == 0) and 2 or 1
-    --         local fan = cal_fan(winner.win_fan) 
-    --         _current_scores[seatid].end_score = base_rule_cfg.win_own * _base_score * (_game_cfg.max_player - 1) * fan * wuguifan
-    --         lose_score = lose_score - _current_scores[seatid].end_score * fan * wuguifan
-    --     end
-
-    --     _current_scores[_last_losers[1]].end_score = lose_score
-    -- end
-
 end
 
 local function set_horse_scores()
@@ -2375,9 +2330,10 @@ local function game_end()
 
     _last_horse_tiles = nil
     LOG_DEBUG("game end win_type %s",tostring(_win_type))
-    if _win_type == WIN_TYPE.OWN or _win_type == WIN_TYPE.OTHER or _win_type == WIN_TYPE.GANG or _win_type == WIN_TYPE.GANGSHANGKAIHUA then
+    if _win_type == WIN_TYPE.OWN or _win_type == WIN_TYPE.OTHER 
+    or _win_type == WIN_TYPE.GANG or _win_type == WIN_TYPE.GANGSHANGKAIHUA then
     --    _last_horse_tiles = get_bonus_tiles()
-        set_horse_scores()
+        --set_horse_scores()--抓马算法
         set_end_scores()
         set_lianzhuang_score()
     end
@@ -2440,8 +2396,8 @@ local function game_end()
         horseTile = _horse_tiles,
         hitTiles = _last_hit_tiles
     }
-
---    PRINT_T(msg)
+    luadump(msg,"resMJResult=")
+    -- PRINT_T(msg)
     _tapi.send_to_all("game.resMJResult", msg)
     
     _last_scores = _current_scores
@@ -3140,10 +3096,10 @@ function mj_logic.resume(p, is_resume)
     local time, curuid, tile
     local tiles = {}
     if check_status(MJ_STATUS.WAITING_PLAYER) then
-        time = (_last_timer_start + TIME.OPT_TIME - skynet.now()) / 100
+        time = math.floor((_last_timer_start + TIME.OPT_TIME - skynet.now()) / 100)
     end
     if check_status(MJ_STATUS.WAITING_CLAIM_PLAYER) then
-        time = (_last_timer_start + TIME.CLAIM_TIME - skynet.now()) / 100
+        time = math.floor((_last_timer_start + TIME.CLAIM_TIME - skynet.now()) / 100)
     end
     if _opt_seatid then
         curplayer = _players_sit[_opt_seatid]
@@ -3157,16 +3113,16 @@ function mj_logic.resume(p, is_resume)
 --    PRINT_T(_players_sit)
     for seatid, player in pairs(_players_sit) do
         local info = {}
-        info.uid = player.uid
+        info.uid = tonumber(player.uid)
         info.tilenum = player.tiles and #player.tiles or 0
         if _game_status >= MJ_STATUS.GAME_END or p.uid == player.uid then
-            info.tiles = player.tiles
+            info.handcards = player.tiles
         end
-        info.tiles = info.tiles or {}
+        info.handcards = info.handcards or {}
         info.opts = {}
         info.desk = player.discards or {}
-        for _,v in ipairs(player.hold_tiles or {}) do
-            info.opts[#info.opts] = {opttype = v.opttype,cards = v.cards}
+        for k,v in ipairs(player.hold_tiles or {}) do
+            info.opts[k] = {opttype = v.opttype,cards = v.cards}
         end
         info.seatid = seatid
         osapi.tinsert(tiles, info)
@@ -3181,17 +3137,17 @@ function mj_logic.resume(p, is_resume)
     local msg = {
         status = _game_status,
         time = time,
-        curuid = curuid,
+        curuid = tonumber(curuid),
         tiles = tiles,
         tile = tile,
-        seatid = seatid,
+        seatid = seatid or 1,
         myopts = myopts or {},
         banker = _banker_seatid or 0,
         leftCard = #_wall,
-        shifter = {SHIFTER1, SHIFTER2},
+        shifter = {},
         dices = _dices,
     }
- --   PRINT_T(msg)
+    -- luadump(msg.tiles,"game.resMJResume===")
     p:send_msg("game.resMJResume", msg)
 --    _tapi.send_to_all("game.UserOnline", { uid = p.uid })
 

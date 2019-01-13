@@ -500,12 +500,12 @@ local function check_win(tiles)
 
 	if shifter_cnt + #tiles == 14 then
 		if check_qidui(tiles_cnt, shifter_cnt) then
-		--	LOG_DEBUG("qidui")
+			LOG_DEBUG("qidui")
 			return true
 		end
 
 		if check_shisanyao(tiles_cnt, shifter_cnt) then
-		--	LOG_DEBUG("shisanyao")
+			LOG_DEBUG("shisanyao")
 			return true
 		end
 	end
@@ -646,7 +646,10 @@ function _M.check_win_all(tiles, tile, hold_tiles)
 	local copy = copy_table(tiles)
 
 	if tile then table.insert(copy, tile) end
-
+	-- LOG_DEBUG("自摸检测")
+	-- luadump(tiles,"手牌")
+	-- luadump(tile,"摸的牌")
+	-- luadump(hold_tiles,"手里的牌")
 	return check_win(copy)
 end
 
@@ -657,7 +660,10 @@ function _M.check_win_one(tiles, tile, hold_tiles)
 	local copy = copy_table(tiles)
 
 	table.insert(copy, tile)
-
+	-- LOG_DEBUG("点炮检测")
+	-- luadump(tiles,"手牌")
+	-- luadump(tile,"出的牌")
+	-- luadump(hold_tiles,"手里的牌")
 	return check_win(copy)
 end
 
@@ -710,6 +716,9 @@ end
 
 --能不能吃
 function _M.check_chow(tiles, tile)
+	LOG_DEBUG("检测是否可以吃")
+	luadump(tiles,"手牌")
+	luadump(tile,"出的牌")
 	local chows
 	--东西南北中发白不能吃
 	if tile > 39 then
@@ -744,7 +753,8 @@ function _M.check_chow(tiles, tile)
 			table.insert(chows, tile)
 		end
 	end
-
+	LOG_DEBUG("当前可以吃")
+	luadump(chows,"吃牌的数据")
 	return chows
 end
 

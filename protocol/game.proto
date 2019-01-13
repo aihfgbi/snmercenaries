@@ -14,6 +14,7 @@ enum MsgType {
     RES_READY = 70007;//准备返回
     RES_GAME_START = 70008;//遊戲開始
     RES_UPDATE_GOLD_IN_GAME = 70009;//更新游戏内的金币变化，例如外部冲钱了，需要通知给用户客户端界面
+    
 
     //----------------麻将----------------------
     RES_DEAL_CARD_MJ = 70030;//发牌

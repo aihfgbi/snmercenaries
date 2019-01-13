@@ -68,12 +68,12 @@ local logic
 -- optional string bankrealname = 19;
 --请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像 6已充值金额
 userdataFlag = {
-	gold = 1,--gold bank
-	bind = 2,--phone alipayacc alipayrealname bankacc bankrealname
-	signature = 3,--signature
-	level = 4,--level vipexp
-	headimg = 5,--headimg
-	charged = 6 --charged
+	gold = 2,--gold bank
+	bind = 3,--phone alipayacc alipayrealname bankacc bankrealname
+	signature = 4,--signature
+	level = 5,--level vipexp
+	headimg = 6,--headimg
+	charged = 7 --charged
 }
 --全局变量
 
@@ -791,7 +791,7 @@ function CMD.set_bank(uid, value, reason)
 		string.format(
 			'{"gold":%d,"money":%d,"value":%d,"reason":%d,"bank":%d}',
 			_userdata.gold or 0,
-			_userdata.money,
+			_userdata.money or 0,
 			value,
 			reason,
 			_userdata.bank
@@ -861,7 +861,7 @@ function CMD.add_bank(uid, value, reason)
 		string.format(
 			'{"gold":%d,"money":%d,"value":%d,"reason":%d,"bank":%d}',
 			_userdata.gold or 0,
-			_userdata.money,
+			_userdata.money or 0,
 			value,
 			reason,
 			_userdata.bank
@@ -916,7 +916,7 @@ function CMD.sub_bank(uid, value, reason)
 		string.format(
 			'{"gold":%d,"money":%d,"value":%d,"reason":%d,"bank":%d}',
 			_userdata.gold or 0,
-			_userdata.money,
+			_userdata.money or 0,
 			value,
 			reason,
 			_userdata.bank
@@ -952,7 +952,7 @@ function CMD.sub_gold(uid, gold, reason)
 	_userdata.gold = _userdata.gold - gold
 	log(
 		"sub_gold",
-		string.format('{"gold":%d,"money":%d,"value":%d,"reason":%d}', _userdata.gold or 0, _userdata.money, gold, reason)
+		string.format('{"gold":%d,"value":%d,"reason":%d}', _userdata.gold or 0, gold, reason)
 	)
 	_need_save = true
 	if _p then
@@ -961,8 +961,8 @@ function CMD.sub_gold(uid, gold, reason)
 	update_client_info("gold")
 	--金币变化需要通知到gm服务
 	send_to_gmctrl("gold_change", _uid, 0 - gold, reason)
-
-	local nn = base64encode(_userdata.nickname)
+	luadump(_userdata,"====")
+	local nn = _userdata.nickname
 	pcall(skynet.call, _redis, "lua", "execute", "ZADD", rankname .. "3", _userdata.gold, _uid .. ":" .. nn)
 	return _userdata.gold
 end
@@ -999,7 +999,7 @@ function CMD.add_gold(uid, gold, reason)
 	LOG_DEBUG(uid .. "增加金币：" .. gold .. ",增加之后金币数额:" .. _userdata.gold)
 	log(
 		"add_gold",
-		string.format('{"gold":%d,"money":%d,"value":%d,"reason":%d}', _userdata.gold or 0, _userdata.money, gold, reason)
+		string.format('{"gold":%d,"value":%d,"reason":%d}', _userdata.gold or 0, gold, reason)
 	)
 	_need_save = true
 	if _p then
@@ -1008,8 +1008,8 @@ function CMD.add_gold(uid, gold, reason)
 	update_client_info("gold")
 	--金币变化需要通知到gm服务
 	send_to_gmctrl("gold_change", _uid, gold, reason)
-
-	local nn = base64encode(_userdata.nickname)
+	luadump(_userdata,"====")
+	local nn = _userdata.nickname
 	pcall(skynet.call, _redis, "lua", "execute", "ZADD", rankname .. "3", _userdata.gold, _uid .. ":" .. nn)
 	return _userdata.gold
 end
