@@ -168,6 +168,7 @@ local function do_auth(fd, msg)
         local token = tostring(pbmsg.token)
         -- 去reids里面取用户信息
         local ok, uid = pcall(skynet.call, redis, "lua", "execute", "get", "USER-LOGIN-"..token)
+        uid = tonumber(uid)
         if not ok then
             LOG_DEBUG("redis链接失败")
             return 107
@@ -271,6 +272,9 @@ end
 function SOCKET.auth(fd, sz, msg)
     --解析cmd
     local cmd = tonumber(string.sub(msg, 1, 5))
+    if not cmd then
+        return
+    end
     LOG_DEBUG("cmd:" .. cmd .. ",sz:" .. sz)
     local session = string.sub(msg, 6, 9)
     if cmd == msgcmd["hall.reqVerification"] then --验证

@@ -54,7 +54,7 @@ local KICK_TIMEOUT = 20         --金币模式准备超时 秒
 local _rule_type                --麻将的规则玩法
 local _table_index
 
-local WAIT_DEAL = 20           --等待客户端请求发牌协议超时时间
+local WAIT_DEAL = 1           --等待客户端请求发牌协议超时时间
 local _deal_tiles_time          --超时发牌的时间点
 local _request_deal = {}    --请求发牌的玩家，这个功能现在并没有用到
 
@@ -1860,8 +1860,8 @@ function players_win(p)
     p.round_win = p.round_win + 1
     p.catch_fire = p.catch_fire + 1
     p.round_catch_fire = p.round_catch_fire + 1
-    local win_detail, win_fan = set_windetail_winfan(detail_info)
     local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile)
+    local win_detail, win_fan = set_windetail_winfan(detail_info)
 
     osapi.tinsert(_last_winners, p.seatid)
     p.win_detail = win_detail
@@ -2012,6 +2012,8 @@ local function player_claim_give_up(seatid)
 
     -- table.remove(_claim_players, i)
     _opt_seatid = nil
+    local p = _players_sit[seatid]
+    p:send_msg("game.resMJPlayerOpt", { opts = {opttype = OPT_TYPE.PASS},result = 1 })
     change_game_status(MJ_STATUS.WAITING_CLAIM)
 end
 
