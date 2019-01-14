@@ -76,7 +76,7 @@ local function send_msg(self, name, msg)
     if self.online ~= 1 then
         return
     end
-    --LOG_DEBUG("---===send msg:"..name..","..self.uid)
+    LOG_DEBUG("---===send msg:"..name..","..self.uid)
     local ok, result = pcall(cluster.send, self.agnode, self.agaddr, "send_to_client", self.uid, name, msg)
     if not ok then
         LOG_ERROR("send_msg error:" .. tostring(result))
@@ -235,6 +235,7 @@ function CMD.join(p)
         p.ready = p.ready or 0
         p.online = 1 --0不在线，1在线
         p.score = p.score or 0
+        p.uid = tonumber(p.uid)
         players[p.uid] = p
         count = count + 1
 

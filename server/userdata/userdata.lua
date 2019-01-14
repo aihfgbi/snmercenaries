@@ -443,7 +443,7 @@ function CMD.online(uid, node, addr)
 	online = true
 	agnode = node
 	agaddr = addr
-	_uid = uid
+	_uid = tonumber(uid)
 
 	if not _userdata then
 		if not load_userdata() then
