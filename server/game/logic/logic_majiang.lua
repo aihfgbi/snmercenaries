@@ -1862,12 +1862,12 @@ function players_win(p)
     p.round_catch_fire = p.round_catch_fire + 1
     local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile)
     local win_detail, win_fan = set_windetail_winfan(detail_info)
-
+    _last_winners = _last_winners or {}
     osapi.tinsert(_last_winners, p.seatid)
     p.win_detail = win_detail
     p.win_fan = win_fan
 
-    local loser_tile   = _last_discard_tile
+    local loser_tile = _last_discard_tile
     local loser = _players_sit[_last_discard_seatid]
     loser.lose_cnt = loser.lose_cnt + 1
     loser.round_lose = loser.round_lose + 1
