@@ -275,7 +275,7 @@ local function save_userdata()
 		--[[data1 = mysql.quote_sql_str(data1)
 		data2 = mysql.quote_sql_str(data2)
 		local sql = "UPDATE tbl_user_info_"..(_uid%10).." SET NickName='"..
-		_userdata.nickname.."',BankCash=".. _userdata.bank ..",UserInfo1="..data1..",UserInfo2="..data2.." where UserID = ".._uid
+		_userdata.nickName.."',BankCash=".. _userdata.bank ..",UserInfo1="..data1..",UserInfo2="..data2.." where UserID = ".._uid
 		if #data1 > 30 *1024 then
 			LOG_ERROR("error:用户数据1太大了:".._uid..":"..#data1)
 		end
@@ -761,7 +761,7 @@ function CMD.transfer_bank(uid, value, fromuid)
 		-- send_to_client
 		_userdata.safenotify = 1
 		send_to_client(logic.SafeStatusRep())
-		return true, _userdata.nickname
+		return true, _userdata.nickName
 	end
 end
 
@@ -962,7 +962,7 @@ function CMD.sub_gold(uid, gold, reason)
 	--金币变化需要通知到gm服务
 	send_to_gmctrl("gold_change", _uid, 0 - gold, reason)
 	luadump(_userdata,"====")
-	local nn = _userdata.nickname
+	local nn = _userdata.nickName
 	pcall(skynet.call, _redis, "lua", "execute", "ZADD", rankname .. "3", _userdata.gold, _uid .. ":" .. nn)
 	return _userdata.gold
 end
@@ -1009,7 +1009,7 @@ function CMD.add_gold(uid, gold, reason)
 	--金币变化需要通知到gm服务
 	send_to_gmctrl("gold_change", _uid, gold, reason)
 	luadump(_userdata,"====")
-	local nn = _userdata.nickname
+	local nn = _userdata.nickName
 	pcall(skynet.call, _redis, "lua", "execute", "ZADD", rankname .. "3", _userdata.gold, _uid .. ":" .. nn)
 	return _userdata.gold
 end
@@ -1236,7 +1236,7 @@ function api.add_hongbao(value, reason)
 	--红包变化需要通知到gm服务
 	send_to_gmctrl("hongbao_change", _uid, _userdata.hongbao, _userdata.totalhongbao or 0)
 
-	local nn = base64encode(_userdata.nickname)
+	local nn = base64encode(_userdata.nickName)
 	pcall(skynet.call, _redis, "lua", "execute", "ZINCRBY", rankname .. "1", value, _uid .. ":" .. nn)
 	pcall(skynet.call, _redis, "lua", "execute", "ZINCRBY", rankname .. "2", value, _uid .. ":" .. nn)
 	return _userdata.hongbao
