@@ -382,7 +382,7 @@ local function update_client_info(...)
 	for _, k in pairs(keys) do
 		if k == "gold" then
 			msg[k] = _userdata[k] or 0
-			msg["bank"] = _userdata["bank"] or 0
+			msg["bank"] = 0--_userdata["bank"] or 0
 		elseif k == "bind" then--phone alipayacc alipayrealname bankacc bankrealname
 		elseif k == "level" then--level vipexp
 		elseif _userdata[k] then
@@ -394,6 +394,7 @@ local function update_client_info(...)
 	end
 
 	msg.type = type
+	luadump(msg,"=-=")
 	send_to_client("hall.resRefreshInfo", msg)
 end
 

@@ -551,7 +551,7 @@ local function init_round_data()
         p.end_score = 0
         p.horse_score = 0
         p.gang_score = 0
-        p.win_fan = 1
+        p.win_fan = {}
 
         p.re_ready = 0
 
@@ -2364,12 +2364,13 @@ local function game_end()
             endScore = v.end_score
         end
         local info = {}
+        
+        info.seatid = v.seatid
+        info.handcards = player.tiles
         info.opts = {}
         for k,cc in ipairs(player.hold_tiles or {}) do
             info.opts[k] = {opttype = cc.opttype,cards = cc.cards}
         end
-        info.seatid = v.seatid
-        info.handcards = player.tiles
         info.windetail = player.win_detail or {}
         info.winfan = player.win_fan or {}
         info.nickname = player.nickname
@@ -2396,9 +2397,9 @@ local function game_end()
         wincard = _win_card,
         loseSeatid = _lose_seatid,
         horseTile = _horse_tiles,
-        hitTiles = _last_hit_tiles
+        hitTiles = _last_hit_tiles or {}
     }
-    luadump(msg,"resMJResult=")
+    luadump(msg,"resMJResult=",7)
     -- PRINT_T(msg)
     _tapi.send_to_all("game.resMJResult", msg)
     
@@ -3218,7 +3219,7 @@ function mj_logic.get_tableinfo(p)
             gold = v.gold or 0,
             headimg = v.headimg or "",
             trusteeship = v.trusteeship or 0,
-            ip = v.ip or "",
+            ip = "192.168.3.5"--v.ip or "",
         })
     end
     msg.owner = _owner

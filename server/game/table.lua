@@ -73,9 +73,11 @@ local function tick_tick()
 end
 
 local function send_msg(self, name, msg)
+    LOG_DEBUG("发送了消息"..name)
     if self.online ~= 1 then
         return
     end
+    LOG_DEBUG("发送了消息")
     local ok, result = pcall(cluster.send, self.agnode, self.agaddr, "send_to_client", self.uid, name, msg)
     if not ok then
         LOG_ERROR("send_msg error:" .. tostring(result))

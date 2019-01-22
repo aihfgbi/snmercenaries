@@ -126,6 +126,91 @@ local function send_heartbeat()
 	if ok then
 		send_package(data)
 	end
+
+	-- local ok,data = pcall(msg_encode, "game.resMJResult", 
+	-- {
+	-- 	hitTiles = {
+	-- 	},
+	-- 	horseTile = {
+	-- 	},
+	-- 	loseSeatid = 3,
+	-- 	reslist = {
+	-- 		{
+	-- 			gangscore = 0,
+	-- 			gold      = 10000,
+	-- 			handcards = {
+	-- 			},
+	-- 			headimg   = "http://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJ6iaMOCrTDeia8IoO55ibXWldAHSkCWcAP2sbho2ULibf7qJVctwtjE0GdBA4VeL7u576GTrXNytLYTw/132",
+	-- 			nickname  = "5peg5q+URGXlr7vluLg=",
+	-- 			opts = {
+	-- 			},
+	-- 			seatid    = 1,
+	-- 			uid       = 1013,
+	-- 			windetail = {
+	-- 			},
+	-- 			winfan = {
+	-- 			},
+	-- 			winscore  = 1,
+	-- 		},
+	-- 		{
+	-- 			gangscore = 0,
+	-- 			gold      = 8532,
+	-- 			handcards = {
+	-- 			},
+	-- 			headimg   = "http://wximg.ld68.com/touxiang/1%20(1965).jpg",
+	-- 			nickname  = "总有刁民想害朕i",
+	-- 			opts = {
+	-- 			},
+	-- 			seatid    = 2,
+	-- 			uid       = 1,
+	-- 			windetail = {
+	-- 			},
+	-- 			winfan = {
+	-- 			},
+	-- 			winscore  = 1,
+	-- 		},
+	-- 		{
+	-- 			gangscore = 0,
+	-- 			gold      = 2902,
+	-- 			handcards = {
+	-- 			},
+	-- 			headimg   = "http://wximg.ld68.com/touxiang/1%20(3961).jpg",
+	-- 			nickname  = "纯、白色",
+	-- 			opts = {
+	-- 			},
+	-- 			seatid    = 3,
+	-- 			uid       = 2,
+	-- 			windetail = {
+	-- 			},
+	-- 			winfan = {
+	-- 			},
+	-- 			winscore  = 1,
+	-- 		},
+	-- 		{
+	-- 			gangscore = 0,
+	-- 			gold      = 4422,
+	-- 			handcards = {
+	-- 			},
+	-- 			headimg   = "http://wximg.ld68.com/touxiang3/a5337.jpg",
+	-- 			nickname  = "依旧゛一个人",
+	-- 			opts = {
+	-- 			},
+	-- 			seatid    = 4,
+	-- 			uid       = 3,
+	-- 			windetail = {
+	-- 			},
+	-- 			winfan = {
+	-- 			},
+	-- 			winscore  = 1,
+	-- 		}
+	-- 	},
+	-- 	winType    = 2,
+	-- 	wincard    = 36
+	-- })
+	-- if ok then
+	-- 	LOG_DEBUG("game.resMJResult发送消息成功")
+	-- 	send_package(data)
+	-- end
 end
 
 local function msg_dispatch( msg )
@@ -294,13 +379,14 @@ end
 -- 发送协议到客户端
 function CMD.send_to_client(uid, name, body)
 	if uid ~= _uid then return end
-	-- LOG_DEBUG("======================================================")
-	-- LOG_DEBUG("send:"..name)
-	-- luadump(body)
-	-- LOG_DEBUG("======================================================")
+	LOG_DEBUG("======================================================")
+	LOG_DEBUG("send:"..name)
+	luadump(body,"==",7)
+	LOG_DEBUG("======================================================")
 	if name then
 		local ok,data = pcall(msg_encode, name, body)
 		if ok then
+			LOG_DEBUG("发送了消息,"..uid..","..name)
 			send_package(data)
 		else
 			LOG_WARNING(data)

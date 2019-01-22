@@ -565,18 +565,19 @@ function this.reqRefreshInfo(msg)
                 type = 1,
                 nickname = userdata.nickName,
                 gold = userdata.gold,
-                bank = userdata.bank,
+                bank = 0,--userdata.bank,
                 level = userdata.level or 1,
                 vipexp = userdata.vipexp or 0,
                 sex = userdata.sex,
                 signature = userdata.signature or "",
-                headimg = --[[userdata.headImg or]] string.format( headimgurl,RAND_NUM(1,4000) ),
+                headimg = userdata.headImg or "",
                 gameid = gameid,
                 gametype = gametype,
-                charged = userdata.charged or 0
+                charged = 0--userdata.charged or 0
             }
         elseif msg.type then
             local strlist = {
+                "",
                 "gold",--gold bank
                 "bind",--phone alipayacc alipayrealname bankacc bankrealname
                 "signature",--signature
@@ -596,7 +597,7 @@ function this.reqRefreshInfo(msg)
                 uid = msg.uid,
                 nickname = data.nickName,
                 sex = data.sex,
-                signature = userdata.signature or "",
+                signature = "",--userdata.signature or "",
                 headimg = userdata.headImg or ""
             }
         else
