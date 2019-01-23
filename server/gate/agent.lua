@@ -226,20 +226,19 @@ local function msg_dispatch( msg )
 	end
 
 	_timeout_count = 0--重置心跳计时
-	if msgid == msgcmd["hall.reqHeart"] then
-		send_heartbeat()
-		return
-	end
 
 	msgname = msgname or ""
 	local module, method = msgname:match "([^.]*).(.*)"
 	module = module or "" 
 	method = method or ""
-
-	LOG_DEBUG("======================================================")
-	LOG_DEBUG("recive:"..method)
-	luadump(msgdata)
-	LOG_DEBUG("======================================================")
+	
+	if method ~= "reqHeart" then
+		-- body
+		LOG_DEBUG("======================================================")
+		LOG_DEBUG("recive:"..method)
+		luadump(msgdata)
+		LOG_DEBUG("======================================================")
+	end
 
 	local respname,respdata
 	if module == "hall" then
@@ -274,11 +273,13 @@ local function msg_dispatch( msg )
 	end
 
 	if respname then
-
-		LOG_DEBUG("======================================================")
-		LOG_DEBUG("send:"..respname)
-		luadump(respdata)
-		LOG_DEBUG("======================================================")
+		if respname ~= "hall.resHeart" then
+			-- body
+			LOG_DEBUG("======================================================")
+			LOG_DEBUG("send:"..respname)
+			luadump(respdata)
+			LOG_DEBUG("======================================================")
+		end
 
 		local ok,data = pcall(msg_encode, respname, respdata)
 		if ok then
@@ -289,15 +290,14 @@ local function msg_dispatch( msg )
 	end
 end
 
-skynet.register_protocol {
-	name = "client",
-	id = skynet.PTYPE_CLIENT,
-	unpack = skynet.tostring,
-	dispatch = function (_, _, msg)
-		msg_dispatch(msg)
-		return true
-	end
-}
+-- skynet.register_protocol {
+-- 	name = "client",
+-- 	id = skynet.PTYPE_CLIENT,
+-- 	unpack = skynet.tostring,
+-- 	dispatch = function (_, _, msg)
+-- 		msg_dispatch(msg)
+-- 	end
+-- }
 
 
 local function start_heart()

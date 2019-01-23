@@ -25,7 +25,8 @@ function handler.message(fd, msg, sz)
     local c = connection[fd]
     local agent = c.agent
     if agent then
-        skynet.redirect(agent, 0, "client", 1, msg, sz)
+        skynet.send(agent, "lua", "websocket_dispatch", netpack.tostring(msg, sz))
+        -- skynet.redirect(agent, 0, "client", 1, msg, sz)
     else
         skynet.send(watchdog, "lua", "socket", "auth", fd, sz, netpack.tostring(msg, sz))
     end

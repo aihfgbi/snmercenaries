@@ -513,6 +513,10 @@ function this.BuyReq(msg)
     return "user.BuyRep", {id = msg.id, count = msg.count, result = 0}
 end
 
+function this.reqHeart(msg)
+    return "hall.resHeart", {time = os.time()}
+end
+
 function this.reqRefreshInfo(msg)
     LOG_DEBUG("收到了刷新用户信息，"..uid)
     luadump(msg,"msg=====")
