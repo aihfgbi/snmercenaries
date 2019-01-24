@@ -394,8 +394,8 @@ local function update_client_info(...)
 	end
 
 	msg.type = type
-	luadump(msg,"=-=")
-	send_to_client("hall.resRefreshInfo", msg)
+	luadump(msg,"shua xin dan ge xinxi")
+	-- send_to_client("hall.resRefreshInfo", msg)
 end
 
 local function send_to_gmctrl(cmd, ...)
