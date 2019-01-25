@@ -43,7 +43,7 @@ skynet.start(function()
 	--local histroysql = skynet.newservice("mysqlpool", ".histroysql")
 	--skynet.call(histroysql, "lua", "start", cfg, skynet.getenv("mysql_maxconn"))
 
-	skynet.uniqueservice("rankserver")
+	skynet.uniqueservice("rediswatch")
 	
 	local usermanager = skynet.uniqueservice("usermanager")
 	cluster.register("manager", usermanager) --在本地进程内调用 cluster.register(name [,addr]) 可以把 addr 注册为 cluster 可见的一个字符串名字 name 。如果不传 addr 表示把自身注册为 name 。

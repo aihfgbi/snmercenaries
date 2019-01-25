@@ -395,7 +395,7 @@ local function update_client_info(...)
 
 	msg.type = type
 	luadump(msg,"shua xin dan ge xinxi")
-	-- send_to_client("hall.resRefreshInfo", msg)
+	send_to_client("hall.resRefreshInfo", msg)
 end
 
 local function send_to_gmctrl(cmd, ...)
@@ -682,7 +682,7 @@ function CMD.sub_money(uid, money, reason)
 		string.format('{"gold":%d,"money":%d,"value":%d,"reason":%d}', _userdata.gold or 0, _userdata.money, money, reason)
 	)
 	_need_save = true
-	update_client_info("money")
+	-- update_client_info("money")
 	return true
 end
 
@@ -712,7 +712,7 @@ function CMD.add_money(uid, money, reason)
 		string.format('{"gold":%d,"money":%d,"value":%d,"reason":%d}', _userdata.gold or 0, _userdata.money, money, reason)
 	)
 	_need_save = true
-	update_client_info("money")
+	-- update_client_info("money")
 	return true
 end
 
@@ -732,7 +732,7 @@ function CMD.charge(uid, count, channel, order)
 		-- if count == 5 then
 		CMD.add_money(uid, 100, 1008)
 		CMD.add_gold(uid, 20000, 108)
-		update_client_info("charged")
+		-- update_client_info("charged")
 	else
 		_userdata.charged = (_userdata.charged or 0) + count
 	end
@@ -1047,7 +1047,7 @@ function CMD.add_win(uid, gameid, reason)
 		)
 	)
 	_need_save = true
-	update_client_info("wincount")
+	-- update_client_info("wincount")
 
 	if _userdata.totalwincount >= 10 and _userdata.group and _userdata.group.parent and _userdata.binding then
 		-- 任务达成，通知上级
@@ -1131,7 +1131,7 @@ function CMD.gm_cmd(uid, cmd, ...)
 				_userdata.wincount
 			)
 		)
-		update_client_info("wincount")
+		-- update_client_info("wincount")
 		return _userdata.wincount
 	elseif cmd == "set_gold" then
 		-- local v = {...}
@@ -1233,7 +1233,7 @@ function api.add_hongbao(value, reason)
 			reason
 		)
 	)
-	update_client_info("hongbao")
+	-- update_client_info("hongbao")
 	--红包变化需要通知到gm服务
 	send_to_gmctrl("hongbao_change", _uid, _userdata.hongbao, _userdata.totalhongbao or 0)
 
@@ -1277,7 +1277,7 @@ function api.sub_hongbao(value, reason)
 			reason
 		)
 	)
-	update_client_info("hongbao")
+	-- update_client_info("hongbao")
 	--红包变化需要通知到gm服务
 	send_to_gmctrl("hongbao_change", _uid, _userdata.hongbao, _userdata.totalhongbao or 0)
 	return _userdata.hongbao

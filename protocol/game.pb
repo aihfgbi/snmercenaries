@@ -1,5 +1,5 @@
 
-ÿ#
+‚$
 
 game.protogame"²
 player
@@ -123,11 +123,11 @@ loseSeatid (
 winscore	 (
 	gangscore
  (
-gold ("×
+gold ("Ú
 resMJResume
 status (
-time (
-curuid (*
+time (
+	curseatid (*
 tiles (2.game.resMJResume.tilesinfo
 tile (
 seatid (

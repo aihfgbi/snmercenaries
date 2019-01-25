@@ -64,6 +64,12 @@ function CMD.stop()
 	pool = {}
 end
 
+function CMD.publishMsg(name,msg)
+	local db = getconn()
+	db:publish(name, msg)
+	return 11
+end
+
 skynet.start(function()
 	skynet.dispatch("lua", function(session, source, cmd, ...)
 		local f = assert(CMD[cmd], cmd .. " not found")

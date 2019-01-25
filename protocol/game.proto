@@ -221,7 +221,7 @@ message resMJResume {
     }
     required int32 status = 1;  //当前状态
     optional int32 time = 2;    //当前状态剩余时间
-    optional int32 curuid = 3;  //当前操作人
+    optional int32 curseatid = 3;  //当前操作人
     repeated tilesinfo tiles = 4;  //玩家手牌
     optional int32 tile = 5;  //摸到的牌
     //6和7只有在status为等待玩家吃碰杠 且当前操作玩家正是自己时才有效

@@ -3104,6 +3104,7 @@ function mj_logic.resume(p, is_resume)
     if check_status(MJ_STATUS.WAITING_CLAIM_PLAYER) then
         time = math.floor((_last_timer_start + TIME.CLAIM_TIME - skynet.now()) / 100)
     end
+    local curplayer
     if _opt_seatid then
         curplayer = _players_sit[_opt_seatid]
         if curplayer.uid == p.uid then
@@ -3140,7 +3141,7 @@ function mj_logic.resume(p, is_resume)
     local msg = {
         status = _game_status,
         time = time,
-        curuid = tonumber(curuid),
+        curseatid = curplayer and curplayer.seatid or -1,
         tiles = tiles,
         tile = tile,
         seatid = seatid or 1,
@@ -3151,7 +3152,10 @@ function mj_logic.resume(p, is_resume)
         dices = _dices,
     }
     -- luadump(msg.tiles,"game.resMJResume===")
-    p:send_msg("game.resMJResume", msg)
+    if _game_status >= 3 then --发牌结束后才发送恢复信息
+        p:send_msg("game.resMJResume", msg)
+    end
+    
 --    _tapi.send_to_all("game.UserOnline", { uid = p.uid })
 
     if is_trusteeship(p) then

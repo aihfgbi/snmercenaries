@@ -37,6 +37,7 @@ redis_host = "39.98.93.182"
 redis_port = 25258
 redis_pwd = "sx@WsLaAt^v4oiSIQ6r"
 redis_maxconn = 3
+redis_watch = "admin-pubsub"
 
 log_redis_host = "39.98.93.182"
 log_redis_port = 25258

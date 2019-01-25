@@ -370,7 +370,7 @@ function this.BuyHongbaoReq(msg)
         return "user.BuyHongbaoRep", {result = 1001, value = 0}
     end
     userdata.wincount = userdata.wincount - cfg.cost
-    update_client_info("wincount")
+    -- update_client_info("wincount")
     save_data()
     local node = getNodeByWeight(cfg.award)
     local v = math.random(node.earn[1], node.earn[2])
