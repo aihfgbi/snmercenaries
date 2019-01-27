@@ -22,7 +22,8 @@ function watching()
 	w:subscribe("admin-pubsub")
 	-- w:psubscribe "hello.*"
 	while true do
-		luadump(w:message(),"Watch==")
+		-- luadump(w:message(),"Watch==")
+		-- 收到订阅消息，去队列里面读取消息
 	end
 end
 
@@ -45,7 +46,6 @@ function test(  )
 end
 
 skynet.start(function()
-	LOG_DEBUG("开起监听")
 	skynet.dispatch("lua", function(_,_, command, ...)
 		-- LOG_DEBUG("需要执行:"..command)
 		local f = CMD[command]

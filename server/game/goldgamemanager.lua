@@ -58,16 +58,6 @@ function CMD.join(gameid, p)
 	return nodename, addr
 end
 
--- --由ctrl发来的重连信息
--- function CMD.resume(uid, gameid)
--- 	send_to_gmctrl("user_resume", uid, 2, gameid)
--- end
-
--- 由ctrl发来的gmctrl_storage消息
-function CMD.send_gmctrl_storage(info)
-	send_to_gmctrl("game_storage", info)
-end
-
 skynet.start(function()
 	skynet.dispatch("lua", function(_,_, command, ...)
 		local f = CMD[command]

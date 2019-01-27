@@ -17,12 +17,12 @@ table[10001] = {
 	peng_gang = 1, 					--碰杠倍率
 	qiangganghu = 1,				--抢杠胡
 	qiangminggang = 1,				--抢明杠
-	qianggangquanbao = 1,			--抢杠全包
-	gangbaoquanbao = 1,				--杠爆全包
-	wuguijiabei = 1,				--无鬼加倍
+	qianggangquanbao = 0,			--抢杠全包
+	gangbaoquanbao = 0,				--杠爆全包
+	wuguijiabei = 0,				--无鬼加倍
 	fengpai = 1, 					--风（东西南北中发白）
 	gengzhuang = 1,					--更庄
-	jiejiegao = 1, 					--节节高
+	jiejiegao = 0, 					--节节高
 	horse = 2,   					--2 4 6 8表示抓马个数 21加分爆炸吗 22翻倍爆炸马
 	base_horse = 0,					--是否马跟底分 1是
 }

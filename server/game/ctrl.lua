@@ -128,47 +128,11 @@ local function check_lock(t)
 	return lock_list[t]
 end
 
-local function send_gmctrl_storage()
-	if next(gmctrl_storage) then
-		send_goldmanager("send_gmctrl_storage", gmctrl_storage)
-	end
-
-	table.clear(gmctrl_storage)
-end
-
 local function set_kickback(gameid)
 	for addr,gid in pairs(total_tables) do
 		if gid == gameid then
 			pcall(skynet.call, addr, "lua", "set_kickback", kickbackInfo[gameid].kickback,(kickbackInfo[gameid].cost or 0) - (kickbackInfo[gameid].earn or 0))
 		end
-	end
-end
-
--- 计算抽水比值
-local function calcKickBack()
--- {earn = 0, cost = 0, defEarn = conf.default_earn or DEFAULT_EARN,
--- 		 defCost = conf.default_cost or DEFAULT_COST, defKickback = conf.kickback or DEFAULT_KICKBACK}
-	local k
-	while true do
-		for gameid,v in pairs(kickbackInfo) do
-			if v and v.isSave then
-				v.isSave = false
-				k = (v.earn + v.defEarn)/(v.cost + v.defCost)
-				v.kickback = 1/(k+v.defKickback) - v.defKickback
-				-- LOG_DEBUG("游戏"..gameid.."cost="..v.cost..",earn="..v.earn..",过去一段时间内的营收比值是:"..k..",设定的目标抽水率是:"..v.defKickback..",调解后的kickback="..v.kickback)
-				skynet.fork(set_kickback, gameid)
-				log("kickback", string.format('{"gameid":"%d","earn":%s,"cost":%s,"k":%s,"target":%s,"kickback":%s}', 
-					gameid,v.earn,v.cost,k,v.defKickback,v.kickback))
-				table.insert(gmctrl_storage, {gameid = gameid,
-											  sysearn = (v.cost or 0) - (v.earn or 0),
-											  kickback = v.kickback,
-											  defKickback = v.defKickback,
-											  k = k})
-			end
-		end
-
-		send_gmctrl_storage()
-		skynet.sleep(5*100)
 	end
 end
 
@@ -205,7 +169,7 @@ function CMD.join(gameid, p)
 		end
 	end
 
-	if not table then
+	if not table then--创建新桌子
 		kickbackInfo[gameid] = kickbackInfo[gameid] or {earn = 0, cost = 0, defEarn = conf.default_earn or DEFAULT_EARN,
 		defCost = conf.default_cost or DEFAULT_COST, defKickback = conf.kickback or DEFAULT_KICKBACK, kickback = 1-DEFAULT_KICKBACK}
 
@@ -322,5 +286,4 @@ skynet.start(function()
 	local cfg = room_conf[nodename]
 	assert(cfg, "节点配置有误："..tostring(nodename))
 	logredis = skynet.uniqueservice("logredispool")
-	skynet.fork(calcKickBack)
 end)

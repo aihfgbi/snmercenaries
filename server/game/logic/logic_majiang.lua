@@ -171,6 +171,7 @@ local CAN_GANG              --是否可以杠
 local CAN_CHI               --是否可以吃
 local CAN_DIAN              --是否可以点炮
 
+local _last_peng_card
 
 
 local function fill_table_gameids()
@@ -207,6 +208,9 @@ local function update_gold(uid, num)
         else
             _ctrlcost = _ctrlcost + math.abs(num)
         end
+        _tapi.report_gold(_ctrlcost, _ctrlearn)
+        _ctrlcost = 0
+        _ctrlearn = 0
     end
 --    LOG_WARNING("update_gold update_gold update_gold has_robot[%s] _ctrlcost[%s] _ctrlearn[%s]", tostring(_has_robot), tostring(_ctrlcost), tostring(_ctrlearn))
 end
@@ -348,7 +352,7 @@ local function set_play_type_info()
         
     else
         --TODO
-        _play_type_info.shifter_type = 1
+        _play_type_info.shifter_type = 0
         _play_type_info.horse_type = 0
         for _, v in ipairs(_bit_to_play_type) do
             _play_type_info[v] = 1
@@ -457,17 +461,7 @@ local function confirm_shifter()
     end
     SHIFTER1 = SHIFTER1 or 0
     LOG_DEBUG("shifter1[%s] shifter2[%s]", tostring(SHIFTER1), tostring(SHIFTER2))
-    -- --翻鬼(直接随机出鬼牌)
-    -- if base_rule_cfg.shifter == 1 then
-    --     SHIFTER1 = random_shifter()
-    -- --双鬼(随机出要翻出的牌，之后的两个牌为鬼牌)
-    -- elseif base_rule_cfg.shifter == 2 then
-    --     local tmp_card = random_shifter()
-    --     SHIFTER1 = double_shifter(tmp_card)
-    --     SHIFTER2 = double_shifter(SHIFTER1)
-    -- else
-    --     SHIFTER1 = base_rule_cfg.shifter or 0
-    -- end
+
     mj_deal.set_deal_shifter(SHIFTER1, SHIFTER2)
 end
 
@@ -477,15 +471,17 @@ local function build_wall()
     origin_wall, _builded_tiles = mj_build.build_mj_card(SHIFTER1, SHIFTER2, _fengpai)
 --    PRINT_T(_builded_tiles)
     local len = #origin_wall
+    luadump(origin_wall,"origin_wall")
     _wall = {}
     for i=1,len do
-        j = math.random(1, i)
+        local j = math.random(1, i)
         if i ~= j then
             _wall[i] = _wall[j]
         end
 
         _wall[j] = origin_wall[i]
     end
+    luadump(_wall,"_wall")
 -----------------------------test---------------------------
     -- -- 1号出5筒 2号吃 3号碰 4号胡
     -- local test_wall = { 19,19,19,19,19,
@@ -567,9 +563,9 @@ local function init_round_data()
         p.gangbaoquanbao_seatid = nil
         p.auto_out_cnt = 0
         p.gold_change = 0
-    --    p.hand_profit = 0
-     --   p.win_detail = 0
-     --   p.win_fan = 1
+        p.chipengRecord = {0,0,0,0} --吃碰每个人的次数记录
+        p.noPeng = 0 --不能碰的牌
+        p.noDeal = 0 --不能出的牌
     end
 
     _last_discard_seatid = nil
@@ -789,7 +785,7 @@ local function remove_horse_tiles()
 --    PRINT_T(_horse_tiles)
 end
 
---返回值  0不控制 1玩家 2机器人
+--返回值  0不控制 1玩家 2机器人 这里需要做修改，不应该是抽水率来控制，应该改成库存控制，并且手动控制优先
 local function get_winner_by_kickback( ... )
     if _isTaste then return 0 end
     if not _kickback or _kickback == 1 then
@@ -835,7 +831,7 @@ end
 local function set_order_card_num()
     local order_card_num = 6
     local someone_ctrled
-    for _,p in pairs(_players_sit) do
+    for _,p in pairs(_players_sit) do --这是单人控制
         if not _isTaste then
             if p.ctrlinfo and next(p.ctrlinfo) then
                 local ctrlgold = (p.ctrlinfo.ctrlmaxgold or 10) - (p.ctrlinfo.ctrlnowgold or 0)
@@ -855,7 +851,7 @@ local function set_order_card_num()
                     end
                 end
                 
-             --   someone_ctrled = true
+               someone_ctrled = true
             end 
         end
         
@@ -863,9 +859,9 @@ local function set_order_card_num()
     end
     
 
-    if someone_ctrled then return end
+    if someone_ctrled then return end --单人控制高于库存控制，如果单人控制了库存控制不生效
    
-    if _has_robot then
+    if _has_robot then --这里应该是改成库存控制，需要有每个人每天赢钱多少，库存等数据来进行判断（20191.27）
         local winner_type = get_winner_by_kickback()
         if winner_type > 0 then
             local ctrl_winner = random_winner(winner_type)
@@ -883,26 +879,18 @@ local function deal_tiles()
     --经过胜率排序后的players
  --   local players_orderd = {}
     local function dispatch_card_by_prior_rate(p)
-        
-        -- if p.ctrlinfo.ctrltype and p.ctrl_cnt > 50 then
-            
-        -- end
-    --    LOG_WARNING("order_card_num:"..order_card_num)
         local cards = osapi.tremove(_builded_tiles)
-        local p_tiles = mj_build.random_non_replacement(cards, p.order_card_num)
-        -- if #p_tiles == 13 then
-        --     PRINT_T(p_tiles)
-        --     PRINT_T(cards)
-        -- end
-        for i=1, 13-#p_tiles do
+        local p_tiles = mj_build.random_non_replacement(cards, p.order_card_num)--从造好的牌型里面去随机order_card_num张牌出来，默认6张
+
+        for i=1, 13-#p_tiles do --从牌堆里面补齐13张
             osapi.tinsert(p_tiles, osapi.tremove(_wall))
         end
         _win_tiles = _win_tiles or {}
-        _win_tiles[p.uid] = cards
+        _win_tiles[p.uid] = cards --剩余没有随机到的牌放进数组
         return p_tiles
     end
 
-    set_order_card_num()
+    set_order_card_num() --根据控制设置需要的牌张数，最大13，表示胜率100
 
     for k,v in ipairs(_players_sit) do
         v.tiles = dispatch_card_by_prior_rate(v)
@@ -1040,22 +1028,9 @@ local function player_drow()
     
     local opts = {{opttype=draw_type, cards={tile}}}
     p.last_draw_tile = tile
-    -- --能不能暗杠
-    -- local black_tile = mj_deal.check_concealed_kong(p.tiles, tile)
-
-    -- if black_tile then1113
-    --     osapi.tinsert(opts, {opttype=OPT_TYPE.BLACK_GANG, cards=black_tile})
-    -- end
-    -- --能不能明杠
-    -- local light_tile = check_light_gang(p)
-    -- if light_tile then
-    --     osapi.tinsert(opts, {opttype=OPT_TYPE.LIGHT_GANG, cards={tile}})
-    -- end
-
-    -- if mj_deal.check_win_all(p.tiles, tile, SHIFTER_NUM) then
-    --     LOG_DEBUG("PLAYER :%s win all, last draw tile : %s", tostring(p.uid), tostring(tile))
-    --     osapi.tinsert(opts, {opttype=OPT_TYPE.WIN, cards={tile}})
-    -- end
+    --摸牌成功清除不能出牌和不能碰牌
+    p.noPeng = 0
+    p.noDeal = 0
 
     p:send_msg("game.resMJDrawCard", {card = tile, cardnum = #_wall,seatid = p.seatid})
     _tapi.send_except("game.resMJDrawCard", {cardnum = #_wall,seatid = p.seatid}, p.uid)
@@ -1112,7 +1087,7 @@ local function new_game()
     -- TODO clear round info
     
     init_scores()
-    confirm_shifter()
+    -- confirm_shifter()
     build_wall()
     has_robot()
     
@@ -1129,7 +1104,7 @@ local function new_game()
     --     random_gamewinner()
     -- end
 --    deal_tiles()
-    remove_horse_tiles()
+    -- remove_horse_tiles()
     -- local win_tiles_num = 0
     -- for k,v in pairs(_win_tiles) do
     --     win_tiles_num = win_tiles_num + #v
@@ -1303,6 +1278,14 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
     -- if tiles[#tiles] ~= _last_discard_tile then 
         -- LOG_DEBUG("tiles last tile :%s is not equal to last discard tile:%s", tostring(tiles[#tiles]), _last_discard_tile)
         -- return end
+    --记录手里是否有那张牌，用来判断臭吃规则
+    local hasTilePos
+    if opttype == OPT_TYPE.CHI then
+        hasTilePos = has_tile(p.tiles,_last_discard_tile)
+        if hasTilePos then
+            LOG_DEBUG("手里有吃的牌=="..hasTilePos)
+        end
+    end
 
     if #tiles == 1 then
         for i=1,cnt-2 do
@@ -1347,7 +1330,7 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
     p.hold_tiles = p.hold_tiles or {}
     osapi.tinsert(p.hold_tiles, {cards       = cards,
                                 opttype     = opttype,
-                                from_seatid = _last_discard_seatid})
+                                fromSeatid = _last_discard_seatid})
    
     if opttype == OPT_TYPE.LIGHT_GANG then
         p.ming_gang = p.ming_gang + 1
@@ -1360,6 +1343,17 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
         p.round_an_gang = p.round_an_gang + 1
     end
 
+    --记录吃碰次数
+    p.chipengRecord[_last_discard_seatid] = p.chipengRecord[_last_discard_seatid] + 1
+    --找出当前最大的吃碰次数
+    local maxCpnum = 0
+    local cplist = p.chipengRecord
+    for k,v in pairs(cplist) do
+        if v > maxCpnum then
+            maxCpnum = v
+        end
+    end
+
     _tapi.send_to_all(
         "game.resMJPlayerOpt",
         {
@@ -1368,10 +1362,14 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
             toSeatid = p.seatid,
             areaid = TILE_AREA.HOLD,
             optcard = _last_discard_tile,
-            handnum = #p.tiles
+            handnum = #p.tiles,
+            cpnum = maxCpnum
         }
     )
 
+    if opttype == OPT_TYPE.CHI and hasTilePos then --操作成功记录不能出的牌
+        p.noDeal = _last_discard_tile
+    end
 
     return true
 end
@@ -1494,7 +1492,7 @@ local function player_an_gang(p, tile)
         {
             cards = cards,
             opttype = OPT_TYPE.BLACK_GANG,
-            from_seatid = p.seatid
+            fromSeatid = p.seatid
         }
     )
 
@@ -1509,25 +1507,6 @@ local function player_an_gang(p, tile)
             optcard = tile
         }
     )
-
-    -- for _,user in pairs(_players_sit) do
-    --     if user.uid == p.uid then
-    --         user:send_msg("game.MJCardMove", {cards      = cards,
-    --                                          fromSeatid = p.seatid,
-    --                                          toSeatid   = p.seatid,
-    --                                          areaid      = TILE_AREA.HOLD,
-    --                                          opttype     = OPT_TYPE.BLACK_GANG
-    --                                      })
-    --     else
-    --         user:send_msg("game.MJCardMove", {cards      = {},
-    --                                          fromSeatid = p.seatid,
-    --                                          toSeatid   = p.seatid,
-    --                                          areaid      = TILE_AREA.HOLD,
-    --                                          opttype     = OPT_TYPE.BLACK_GANG
-    --                                      })
-    --     end
-    -- end
-   
     
     insert_last_draw_tile(p)
 
@@ -1665,7 +1644,7 @@ local function player_peng_gang(p, t)
     --         v.opttype = OPT_TYPE.PENG_GANG
     --         osapi.tinsert(v.cards, t)
     --         _tapi.send_to_all("game.MJCardMove", {cards       = v.cards,
-    --                                             fromSeatid = v.from_seatid,
+    --                                             fromSeatid = v.fromSeatid,
     --                                             toSeatid   = p.seatid,
     --                                             areaid      = TILE_AREA.HOLD,
     --                                             opttype     = OPT_TYPE.PENG_GANG
@@ -1703,15 +1682,28 @@ local function peng_gang()
 
             v.opttype = OPT_TYPE.PENG_GANG
             osapi.tinsert(v.cards, t)
+
+            --记录吃碰次数
+            p.chipengRecord[v.fromSeatid] = p.chipengRecord[v.fromSeatid] + 1
+            --找出当前最大的吃碰次数
+            local maxCpnum = 0
+            local cplist = p.chipengRecord
+            for k,v in pairs(cplist) do
+                if v > maxCpnum then
+                    maxCpnum = v
+                end
+            end
+            
             _tapi.send_to_all(
                 "game.resMJPlayerOpt",
                 {
                     opts = {opttype = OPT_TYPE.PENG_GANG,cards = v.cards},
-                    fromSeatid = v.from_seatid,
+                    fromSeatid = v.fromSeatid,
                     toSeatid = p.seatid,
                     areaid = TILE_AREA.HOLD,
                     handnum = #p.tiles,
-                    optcard = t
+                    optcard = t,
+                    cpnum = maxCpnum
                 }
             )
 
@@ -2014,6 +2006,10 @@ local function player_claim_give_up(seatid)
     _opt_seatid = nil
     local p = _players_sit[seatid]
     p:send_msg("game.resMJPlayerOpt", { opts = {opttype = OPT_TYPE.PASS},result = 1 })
+    if _last_peng_card then --碰牌过圈规则
+        p.noPeng = _last_peng_card
+        _last_peng_card = nil
+    end
     change_game_status(MJ_STATUS.WAITING_CLAIM)
 end
 
@@ -2049,6 +2045,8 @@ function check_player_claim(now)
                 claims[k] = claims[k] or {}
                 opts = {opttype=OPT_TYPE.PENG, cards={_last_discard_tile}}
                 osapi.tinsert(claims[k], opts)
+                --记录不能碰的牌，过圈规则
+                _last_peng_card = _last_discard_tile
             end
             
             if CAN_CHI and p.seatid == (_last_discard_seatid % _game_cfg.max_player + 1) then
@@ -2782,18 +2780,18 @@ local function check_join_robot()
     end
 end
 
-local function report_gold_info()
-    if not _isUseGold then return end
-    while true do 
-        if _ctrlcost > 0 or _ctrlearn > 0 then
-            -- CMD.report(addr, gameid, usercost, userearn)
-            _tapi.report_gold(_ctrlcost, _ctrlearn)
-            _ctrlcost = 0
-            _ctrlearn = 0
-        end
-        skynet.sleep(5*100)
-    end
-end
+-- local function report_gold_info()
+--     if not _isUseGold then return end
+--     while true do 
+--         if _ctrlcost > 0 or _ctrlearn > 0 then
+--             -- CMD.report(addr, gameid, usercost, userearn)
+--             _tapi.report_gold(_ctrlcost, _ctrlearn)
+--             _ctrlcost = 0
+--             _ctrlearn = 0
+--         end
+--         skynet.sleep(5*100)
+--     end
+-- end
 
 --金币场入场条件
 local function gold_check(p)
@@ -2851,6 +2849,14 @@ function client.reqReady( p, msg )
     p:send_msg("game.resReady", { uid = p.uid, seatid = -1, result = 1 })
 end
 
+--[[
+    @desc: 玩家操作
+    author:{author}
+    time:2019-01-27 21:54:28
+    --@p:
+	--@msg: 
+    @return:
+]]
 function client.reqMJPlayerOpt( p, msg )
     LOG_DEBUG("player[%d] opt[%d]", p.uid, msg.opts.opttype)
     local opttype = msg.opts.opttype
@@ -2903,6 +2909,10 @@ function client.reqMJPlayerOpt( p, msg )
             _qishouhu = false
             _genzhuangtile = false
         elseif opttype == OPT_TYPE.PENG then
+            if p.noPeng == cards[1] then --弃碰过圈规则
+                p:send_msg("game.resMJPlayerOpt", { result = 2 })
+                return
+            end
             clear_claim_players()
             player_peng(p, cards[1])
             _qishouhu = false
@@ -2922,6 +2932,10 @@ function client.reqMJPlayerOpt( p, msg )
 
     if check_status(MJ_STATUS.WAITING_PLAYER) then --等待玩家出牌的情况下
         if opttype == OPT_TYPE.DISCARD then
+            if p.noDeal == cards[1] then --臭吃规则
+                p:send_msg("game.resMJPlayerOpt", { result = 1 })
+                return
+            end
             discard(p, cards[1])
         elseif opttype == OPT_TYPE.BLACK_GANG then
         --    PRINT_T(cards)
@@ -3123,11 +3137,11 @@ function mj_logic.resume(p, is_resume)
             info.handcards = player.tiles
         end
         info.handcards = info.handcards or {}
-        info.opts = {}
+        info.opts = player.hold_tiles or {}
         info.desk = player.discards or {}
-        for k,v in ipairs(player.hold_tiles or {}) do
-            info.opts[k] = {opttype = v.opttype,cards = v.cards}
-        end
+        -- for k,v in ipairs(player.hold_tiles or {}) do
+        --     info.opts[k] = {opttype = v.opttype,cards = v.cards}
+        -- end
         info.seatid = seatid
         osapi.tinsert(tiles, info)
     end
@@ -3315,7 +3329,8 @@ status_func = {
     [MJ_STATUS.CHECK_QIANGGANG] = deal_check_qianggang,
 }
 
-function mj_logic.init( ps, api, m_conf, m_times, m_score, m_pay, m_code, m_gameid, uid, usegold, matchid, mjinfo, kb )
+function mj_logic.init( ps, api, m_conf, m_times, m_score, m_pay,
+     m_code, m_gameid, uid, usegold, matchid, mjinfo, kb )
     fill_table_gameids()
     _players = ps
     _tapi = api
@@ -3347,7 +3362,7 @@ function mj_logic.init( ps, api, m_conf, m_times, m_score, m_pay, m_code, m_game
         _kickback = kb
         _ctrlcost = 0
         _ctrlearn = 0
-        skynet.fork(report_gold_info)
+        -- skynet.fork(report_gold_info)
     end
     
     

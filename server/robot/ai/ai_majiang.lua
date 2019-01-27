@@ -25,6 +25,8 @@ robot_info = {
 		gang = {41,23},
 	},
 	replace = uid,		是否接的托管的玩家
+	noPeng = 0, 棄碰过圈规则
+	noDeal = 0  臭吃规则
 }
 ]]
 
@@ -145,13 +147,11 @@ end
 
 local function discard()
 	local discard_tile
-	if robot_info.must_win then
-		discard_tile = last_tile
-	elseif is_next_banker() then
-		if gen_zhuang_tile and table.indexof(robot_info.tiles, gen_zhuang_tile) then
-			discard_tile = gen_zhuang_tile
-		end
-	end
+	-- if is_next_banker() then
+	-- 	if gen_zhuang_tile and table.indexof(robot_info.tiles, gen_zhuang_tile) then
+	-- 		discard_tile = gen_zhuang_tile
+	-- 	end
+	-- end
 
 	if not discard_tile then
 		discard_tile = get_discard_tile()
@@ -259,9 +259,6 @@ function server_msg.resMJDealCard(msg)
 		if next(table_tiles) then
 			table.clear(table_tiles)
 		end
-		if robot_info.must_win then
-			LOG_DEBUG("winner_robot tiles [%s]", table.concat(robot_info.tiles, ","))
-		end
 	end
 	banker_seatid = msg.banker
 	shifter1 = msg.shifter[1] or 0
@@ -271,6 +268,16 @@ function server_msg.resMJDealCard(msg)
 end
 
 function server_msg.resMJPlayerOpt(msg)
+	if msg.result and msg.result == 1 then --不能出这张牌，重新出牌
+		LOG_DEBUG("不能出这张牌，重新出牌")
+		discard()
+		return
+	end
+	if msg.result and msg.result == 2 then --不能碰这张牌，过
+		LOG_DEBUG("不能碰这张牌，过")
+		delay_call(math.random(0,1), pass)
+		return
+	end
 	--有人出牌
 	if msg.cards and #msg.cards == 1 and msg.opttype == OPT_TYPE.DISCARD then
 		if fromSeatid == banker_seatid then
@@ -308,9 +315,7 @@ function server_msg.resMJDrawCard(msg)
 		return
 	end
 	last_tile = msg.card
-	-- if robot_info.must_win then
-	-- 	LOG_WARNING("robot[%d] draw[%d]", robot_info.uid, last_tile)
-	-- end
+
 	--第一轮需要额外延迟几秒
 	local extra_time = 0
 	if not next(table_tiles) then
@@ -318,7 +323,7 @@ function server_msg.resMJDrawCard(msg)
 	end
 	if check_win() then
 		delay_call(math.random(2+extra_time,3+extra_time), win)
-	elseif not robot_info.must_win then
+	else
 		table.insert(robot_info.tiles, last_tile)
 		local an_gang_tile = check_an_gang()
 		if an_gang_tile then
@@ -328,9 +333,29 @@ function server_msg.resMJDrawCard(msg)
 		else
 			delay_call(math.random(2+extra_time,3+extra_time), discard)
 		end
-	else
-		delay_call(math.random(2+extra_time,3+extra_time), discard)
 	end
+end
+
+--检查手中是否有这张牌 有则返回位置
+local function has_tile(t, tile)
+    if type(tile) == "table" then
+        local i = 1
+        local result
+        for k,v in ipairs(t) do
+            if v == tile[i] then
+                result = result or {}
+                result[i] = k
+                i = i + 1
+            end
+        end
+        return result
+    else
+        for k,v in pairs(t) do
+            if v == tile then
+                return k
+            end
+        end
+    end 
 end
 
 function server_msg.resMJNotifyPlayerOpt(msg)
@@ -347,8 +372,6 @@ function server_msg.resMJNotifyPlayerOpt(msg)
 				end
 				if table.indexof(opts, OPT_TYPE.WIN) then
 					delay_call(math.random(2,3), win)
-				elseif robot_info.must_win then
-					delay_call(math.random(2,3), pass)
 				elseif table.indexof(opts, OPT_TYPE.LIGHT_GANG) then
 					-- LOG_WARNING("robot[%d] ming gang", robot_info.uid)
 					delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.LIGHT_GANG, cards={msg.opts[1].cards[1]}})
@@ -357,9 +380,7 @@ function server_msg.resMJNotifyPlayerOpt(msg)
 					delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.PENG, cards={msg.opts[1].cards[1]}})
 				--	move_to_hold("peng", 2, msg.opts[1].cards[1])
 				elseif table.indexof(opts, OPT_TYPE.CHI) then
-					--TODO
-					--player_chi(msg.opts[1].cards[1])
-					delay_call(math.random(2,3), pass)
+					delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.CHI, cards={msg.opts[1].cards[1]}})
 				else
 					delay_call(math.random(2,3), pass)
 				end
@@ -436,12 +457,6 @@ end
 
 function server_msg.UpdateGoldInGame(msg)
 	-- body
-end
-
---此机器人需要赢
-function server_msg.winner_robot( ... )
-	LOG_DEBUG("winner_robot is [%d]", robot_info.uid)
-	robot_info.must_win = true
 end
 
 function ai_mgr.init(api, uid, gameid)

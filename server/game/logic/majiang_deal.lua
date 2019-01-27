@@ -779,8 +779,8 @@ end
 
 --设置鬼牌
 function _M.set_deal_shifter(shif1, shif2)
-	shifter1 = shif1
-	shifter2 = shif2
+	-- shifter1 = shif1
+	-- shifter2 = shif2
 end
 
 function _M.set_rule_data(spec_cfg, rate_cfg)

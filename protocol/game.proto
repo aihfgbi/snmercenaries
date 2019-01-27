@@ -156,6 +156,7 @@ message resMJDrawCard {
 message Opt {
     required int32 opttype = 1;//操作类型
     repeated int32 cards = 2;//操作的牌
+    optional int32 fromSeatid = 3;//来源，用于恢复命令做显示，其他命令里面没有发
 }
 
 //RES_NOTIFY_PLAYER_OPT_MJ = 70032;//通知玩家操作
@@ -180,9 +181,10 @@ message resMJPlayerOpt {
     optional int32 fromSeatid = 2;  //来源
     optional int32 toSeatid = 3;    //去向
     optional int32 areaid = 4;      //牌的位置 1手中 2吃碰杠 3打出去
-    optional int32 result = 5; //错误码待编辑,暂时没有这个字段
+    optional int32 result = 5; //1 臭吃規則不能出这张牌，2 碰过圈规则不能碰
     optional int32 handnum = 6; //手牌的数量
     optional int32 optcard = 7; //操作的哪張牌
+    optional int32 cpnum = 8;//吃碰了同一家几次，只会发次数最多的
 }
 
 //RES_RESULT_MJ = 70034;//麻将结算

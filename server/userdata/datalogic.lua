@@ -676,8 +676,8 @@ function this.reqQuickJoinGame(msg)
     if not msg then
         return
     end
-    LOG_DEBUG("收到了加入游戏的请求")
-    luadump(msg,"=======")
+    -- LOG_DEBUG("收到了加入游戏的请求")
+    -- luadump(msg,"=======")
     if gamenode then
         return "hall.resQuickJoinGame", {result = 3, gameid = 1000, ismatch = -1}
     end

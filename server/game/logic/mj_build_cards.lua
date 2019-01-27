@@ -15,16 +15,16 @@ local shifter_num2
 local COMBINE = {}
 
 local weight = {
-	pinghu = 30,
+	pinghu = 80,
 	qidui = 5,
 	qingyise = 6,
 	qingqidui = 3,
 	pengpenghu = 5,
-	hunyise = 8,
-	hunduidui = 6,
+	hunyise = 0,
+	hunduidui = 0,
 	longqidui = 5,
 	shisanyao = 3,
-	ziyise = 10,
+	ziyise = 0,
 	shibaluohan = 0,
 }
 

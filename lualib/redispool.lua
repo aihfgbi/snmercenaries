@@ -66,8 +66,7 @@ end
 
 function CMD.publishMsg(name,msg)
 	local db = getconn()
-	db:publish(name, msg)
-	return 11
+	return db:publish(name, msg)
 end
 
 skynet.start(function()

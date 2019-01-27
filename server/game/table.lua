@@ -73,11 +73,11 @@ local function tick_tick()
 end
 
 local function send_msg(self, name, msg)
-    LOG_DEBUG("发送了消息"..name)
+    -- LOG_DEBUG("发送了消息"..name)
     if self.online ~= 1 then
         return
     end
-    LOG_DEBUG("发送了消息")
+    -- LOG_DEBUG("发送了消息")
     local ok, result = pcall(cluster.send, self.agnode, self.agaddr, "send_to_client", self.uid, name, msg)
     if not ok then
         LOG_ERROR("send_msg error:" .. tostring(result))
@@ -137,9 +137,9 @@ local function leave(p, reason, win, sid)
         if count < 1 then
             api.free_table(nil, 1002)
         else
-            if haslock then
-                skynet.call(manager, "lua", "unlock_table", gameid, skynet.self())
-            end
+            -- if haslock then
+            --     skynet.call(manager, "lua", "unlock_table", gameid, skynet.self())
+            -- end
         end
     end
 end
@@ -179,21 +179,22 @@ end
 
 -- 1006 房间已满
 -- 1008 加入房间失败
+-- 初始化桌子,從ctrl调过来的
 function CMD.init(conf, gid, times, sc, paytype, co, p, mgr, usegold, matchid, params, kickback)
     LOG_DEBUG("init game:logic_" .. conf.logic)
     code = co
-    score = sc
-    config = conf
-    logic = require("logic_" .. conf.logic)
-    count = 0
-    players = {}
-    manager = mgr
-    pay = paytype
-    creater = p.uid
-    createname = p.nickname
-    gameid = gid
-    isusegold = usegold
-    haslock = nil
+    score = sc --底分，开房模式用
+    config = conf --game_conf里面对应gameid的配置
+    logic = require("logic_" .. conf.logic) --游戏逻辑文件
+    count = 0 --房间中的人数
+    players = {} --玩家列表
+    manager = mgr --控制的ctrl
+    pay = paytype --支付模式
+    creater = p.uid --创建者id
+    createname = p.nickname --创建者名字
+    gameid = gid --游戏id
+    isusegold = usegold --是否金币模式
+    -- haslock = nil
     hasstart = false
     record = conf.record
     ismatch = matchid
@@ -240,16 +241,16 @@ function CMD.join(p)
         players[p.uid] = p
         count = count + 1
 
-        if isusegold then
-            if count >= config.max_player then
-                haslock = true
-                skynet.call(manager, "lua", "lock_table", gameid, skynet.self())
-            end
-        else
-            if p.uid == creater then
-                p.hasCost = true
-            end
-        end
+        -- if isusegold then --这个暂时没有用，只有比赛模式里面有lock_table函数
+        --     if count >= config.max_player then
+        --         haslock = true
+        --         skynet.call(manager, "lua", "lock_table", gameid, skynet.self())
+        --     end
+        -- else
+        --     if p.uid == creater then
+        --         p.hasCost = true
+        --     end
+        -- end
 
         -- if hasstart then
         -- pcall(skynet.send, redis, "lua", "execute", "set", "tableinfo->"..tostring(p.uid), nodename..":"..skynet.self())
@@ -259,7 +260,7 @@ function CMD.join(p)
         p:send_msg("hall.resQuickJoinGame", {result = 1, gameid = gameid, ismatch = ismatch or -1})
 
         local msg = logic.get_tableinfo(p)
-        luadump(msg,"get_tableinfo==")
+        -- luadump(msg,"get_tableinfo==")
         if msg then
             p:send_msg("game.resTableInfo", msg)
         end
