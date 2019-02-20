@@ -70,12 +70,12 @@ local function msg_decode(data)
 	if #data > 9 then
 		ok,msg = pcall(protobuf.decode,name,data:sub(10))
 		assert(ok and msg, "agent msg_decode protobuf.decode fail, msgid="..msgid)
-		luadump(msg,"msg_decode,msg========")
+		-- luadump(msg,"msg_decode,msg========")
 	end
-	if msgid ~= 10005 then
-		-- body
-		LOG_DEBUG("解析消息成功->"..msgid..",name:"..name)
-	end
+	-- if msgid ~= 10005 then
+	-- 	-- body
+	-- 	LOG_DEBUG("解析消息成功->"..msgid..",name:"..name)
+	-- end
 
 	return msgid,name,msg
 end
@@ -341,8 +341,8 @@ function CMD.start(conf)
 	skynet.call(_gate, "lua", "forward", _client_fd, _uid)
 
 	-- 登录成功了！！
-	LOG_DEBUG("send time:"..time.time())
-	LOG_DEBUG("%d登录成功了",_uid)
+	-- LOG_DEBUG("send time:"..time.time())
+	-- LOG_DEBUG("%d登录成功了",_uid)
 	local ok,data = pcall(msg_encode, "hall.resLogin", {result = 1,uid = _uid})
 	if ok then
 		send_package(data)

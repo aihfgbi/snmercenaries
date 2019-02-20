@@ -32,12 +32,15 @@ lua_path = skynetroot .. "lualib/?.lua;"..
     root.."lualib/?.lua;"..
 	root.."common/?.lua;"
 
+redis_watch_msg = "serverMsg"
+redis_watch_list = "serverList"
+redis_push_msg = "adminMsg"
+redis_push_list = "adminList"
 
 redis_host = "39.98.93.182"
 redis_port = 25258
 redis_pwd = "sx@WsLaAt^v4oiSIQ6r"
 redis_maxconn = 3
-redis_watch = "admin-pubsub"
 
 log_redis_host = "39.98.93.182"
 log_redis_port = 25258
@@ -61,7 +64,7 @@ his_mysql_maxconn = 10
 bank_host = "10.0.21.250"
 bank_port = 7788
 
-logname = "loglist"
+logname = "GAME-LOG-LIST"
 
 dbs_count = 1 --userdata节点的数量
 game_count = 1 --game节点的数量

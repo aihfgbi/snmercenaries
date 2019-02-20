@@ -11,10 +11,10 @@ table[10001] = {
 	chi = 1,						--吃
 	dian = 1,						--点炮
 	win_own = 2,					--自摸倍率
-	win_other = 1,  				--点炮倍率
-	ming_gang = 1,					--明杠倍率
-	an_gang =2,						--暗杠倍率
-	peng_gang = 1, 					--碰杠倍率
+	win_other = 3,  				--点炮倍率
+	ming_gang = 2,					--明杠倍率
+	an_gang =1,						--暗杠倍率
+	peng_gang = 2, 					--碰杠倍率
 	qiangganghu = 1,				--抢杠胡
 	qiangminggang = 1,				--抢明杠
 	qianggangquanbao = 0,			--抢杠全包
@@ -23,7 +23,7 @@ table[10001] = {
 	fengpai = 1, 					--风（东西南北中发白）
 	gengzhuang = 1,					--更庄
 	jiejiegao = 0, 					--节节高
-	horse = 2,   					--2 4 6 8表示抓马个数 21加分爆炸吗 22翻倍爆炸马
+	horse = 0,   					--2 4 6 8表示抓马个数 21加分爆炸吗 22翻倍爆炸马
 	base_horse = 0,					--是否马跟底分 1是
 }
 
@@ -34,21 +34,20 @@ table[11001] = {
 	chi = 1,						--吃
 	dian = 1,						--点炮
 	win_own = 2,					--自摸倍率
-	win_other = 1,  				--点炮倍率
-	ming_gang = 60,					--明杠出的金币
-	an_gang =50,					--暗杠每家出的金币
-	peng_gang = 20, 				--碰杠每家出的金币
+	win_other = 3,  				--点炮倍率
+	ming_gang = 2,					--明杠倍率
+	an_gang =1,						--暗杠倍率
+	peng_gang = 2, 					--碰杠倍率
 	qiangganghu = 1,				--抢杠胡
 	qiangminggang = 1,				--抢明杠
-	qianggangquanbao = 1,			--抢杠全包
-	gangbaoquanbao = 1,				--杠爆全包
-	wuguijiabei = 1,				--无鬼加倍
+	qianggangquanbao = 0,			--抢杠全包
+	gangbaoquanbao = 0,				--杠爆全包
+	wuguijiabei = 0,				--无鬼加倍
 	fengpai = 1, 					--风（东西南北中发白）
 	gengzhuang = 1,					--更庄
-	jiejiegao = 1, 					--节节高
-	horse = 2,   					--2 4 6 8表示抓马个数 21加分爆炸吗 22翻倍爆炸马
+	jiejiegao = 0, 					--节节高
+	horse = 0,   					--2 4 6 8表示抓马个数 21加分爆炸吗 22翻倍爆炸马
 	base_horse = 0,					--是否马跟底分 1是
-	base_score = 10,
 }
 
 return table

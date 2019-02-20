@@ -47,7 +47,8 @@ local function get_userdata(uid)
     local node = "dbs" .. index
     --LOG_DEBUG("node=="..node)
     if not dbs then
-        local ok, id = pcall(cluster.query, node, "manager") --远端可以通过调用 cluster.query(node, name) 查询到这个名字对应的数字地址。如果名字不存在，则抛出 error 。
+        --远端可以通过调用 cluster.query(node, name) 查询到这个名字对应的数字地址。如果名字不存在，则抛出 error 。
+        local ok, id = pcall(cluster.query, node, "manager") 
         if not ok then
             return false
         end

@@ -192,7 +192,6 @@ local function tick_tick()
 					end
 				end
 			end
-
 		end
 		skynet.sleep(100)
 	end

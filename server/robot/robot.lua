@@ -57,6 +57,13 @@ local function tick_tick()
 	end
 end
 
+--[[
+    @desc: 机器人退出
+    author:{author}
+    time:2019-02-21 01:28:13
+    --@uid: 
+    @return:
+]]
 local function robot_exit(uid)
 	pcall(skynet.call, manager, "lua", "free_robot", uid)
 	--by judith

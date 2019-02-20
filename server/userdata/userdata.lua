@@ -35,6 +35,7 @@ local SAVE_CNT = math.ceil(AUTOTIME / TIMESLICE)
 local KILL_CNT = math.ceil(TIMEOUT / TIMESLICE)
 
 local _need_save = false
+local _account_change = false
 local _not_save_cnt = 0
 local _offline_cnt = 0
 local _nodename
@@ -66,7 +67,7 @@ local logic
 -- optional string alipayrealname = 17;
 -- optional string bankacc = 18;
 -- optional string bankrealname = 19;
---请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像 6已充值金额
+-- 请求刷新的类型，0所有信息，1金币 2绑定信息 3自定义签名 4等级和经验 5头像 6已充值金额
 userdataFlag = {
 	gold = 2,--gold bank
 	bind = 3,--phone alipayacc alipayrealname bankacc bankrealname
@@ -82,7 +83,7 @@ local function log(type, content)
 	local log = string.format('{"type":"%s","uid":%d,"time":%d,"data":%s}', type, _uid, os.time(), content)
 	-- LOG_DEBUG("[log]"..log)
 	if _logname and #_logname > 0 then
-		local ok, result = pcall(skynet.send, _logredis, "lua", "execute", "LPUSH", _logname, log)
+		local ok, result = pcall(skynet.send, _logredis, "lua", "execute", "RPUSH", _logname, log)
 		if not ok then
 			LOG_ERROR("error：写入日志失败:" .. tostring(result))
 		end
@@ -110,91 +111,6 @@ local function get_gm_manager()
 	return gmmanager
 end
 
-local function get_new_user(nn)
-	-- 新用户
-	-- LOG_DEBUG("新用户:" .. tostring(_uid))
-	-- local ok, data = pcall(skynet.call, _redis, "lua", "execute", "get", "user:" .. tostring(_uid))
-	-- if not ok or not data then
-	-- 	if use_debug == "0" or nn then
-	-- 		return {
-	-- 			gold = 5000,
-	-- 			money = 10000,
-	-- 			bank = 0,
-	-- 			nickname = nn or "用户" .. tostring(_uid),
-	-- 			exp = 0,
-	-- 			vipexp = 0,
-	-- 			sex = 1,
-	-- 			headimg = "",
-	-- 			usermsg = ""
-	-- 		}
-	-- 	else
-	-- 		return
-	-- 	end
-	-- end
-	-- local ok, info = pcall(json.decode, data)
-	-- if not ok or not info then
-	-- 	if use_debug == "0" or nn then
-	-- 		return {
-	-- 			gold = 5000,
-	-- 			money = 10000,
-	-- 			bank = 0,
-	-- 			nickname = nn or "用户" .. tostring(_uid),
-	-- 			exp = 0,
-	-- 			vipexp = 0,
-	-- 			sex = 1,
-	-- 			headimg = "",
-	-- 			usermsg = ""
-	-- 		}
-	-- 	else
-	-- 		return
-	-- 	end
-	-- end
-	-- if info.nickname and #info.nickname > 0 then
-	-- 	info.nickname = base64decode(info.nickname)
-	-- end
-	-- -- LOG_DEBUG(data)
-	-- info.gender = math.floor(tonumber(info.gender or 1) or 1)
-	-- info.avatar = tostring(info.avatar) or ""
-	-- if info.avatar == "userdata: (nil)" or info.avatar == "userdata:(nil)" or info.avatar == "nil" then
-	-- 	info.avatar = ""
-	-- end
-	-- -- luadump(info)
-	-- return {
-	-- 	gold = 5000,
-	-- 	money = 10000,
-	-- 	bank = 0,
-	-- 	nickname = info.nickname or "用户" .. tostring(_uid),
-	-- 	exp = 0,
-	-- 	vipexp = 0,
-	-- 	sex = info.gender,
-	-- 	headimg = info.avatar,
-	-- 	usermsg = ""
-	-- }
-end
-
-local function insert_new_user()
-	-- LOG_DEBUG("insert user into mysql:" .. _uid)
-	-- local d = get_new_user()
-	-- if not d then
-	-- 	return
-	-- end
-	-- local sql =
-	-- 	"INSERT INTO tbl_user_info_" ..
-	-- 	(_uid % 10) ..
-	-- 		"(UserID,GameID,NickName,OwnCash,BankCash,Diamond,UserType,UserInfo1,UserInfo2,UserInfo3)" ..
-	-- 			" VALUES(" .. _uid .. "," .. _uid .. ",'" .. d.nickname .. "',0,0,0,1,NULL,NULL,NULL)"
-
-	--for i=1,3 do
-	--	local ok,t = pcall(skynet.call, ".mysqlpool", "lua", "execute", sql)
-	--	if ok then
-	--		-- luadump(t)
-	--		break
-	--	end
-	--end
-
-	-- return d
-end
-
 local function load_userdata()
 	if not _uid then
 		return false
@@ -207,6 +123,7 @@ local function load_userdata()
 			-- 转换用户数据
 			ok, userinfo = pcall(json.decode, data)
 			if ok then
+				luadump(userinfo,"取得的用户信息")
 				_userdata = userinfo
 				_userdata.id = math.floor(userinfo.id)
 				_userdata.userType = math.floor(userinfo.userType)
@@ -228,7 +145,6 @@ local function load_userdata()
 					luadump(_userdata, "用户信息==")
 					break
 				end
-				luadump(_userdata, "用户信息==")
 			end
 		end
 	end
@@ -244,76 +160,94 @@ local function save_userdata()
 	if not _uid then
 		return
 	end
-	-- LOG_DEBUG("check save user data:".._uid..",_need_save="..tostring(_need_save))
-	if _need_save then
-		local err1 = true
-		local err2 = true
-		local ok, data = pcall(encode_userdata, _userdata)
-		if not ok then
-			LOG_ERROR("save data error uid:" .. _uid .. ",reason:" .. tostring(data))
-			return
-		end
-
-		-- local group = _userdata.group
-		-- _userdata.group = nil
-		-- data1 = encode_userdata(_userdata)
-		-- data2 = encode_userdata(group)
-		-- _userdata.group = group
-		for i = 1, 3 do
-			-- 尝试三次
-			local ok, result = pcall(skynet.call, _redis, "lua", "execute", "set", "userdata->" .. tostring(_uid), data)
-			if ok and result then
-				-- return
-				-- LOG_DEBUG("save user data into redis now:".._uid..", data size:"..#data)
-				err1 = false
-				break
-			else
-				LOG_ERROR("save user data to redis error " .. i .. ":" .. _uid)
-			end
-		end
-
-		--[[data1 = mysql.quote_sql_str(data1)
-		data2 = mysql.quote_sql_str(data2)
-		local sql = "UPDATE tbl_user_info_"..(_uid%10).." SET NickName='"..
-		_userdata.nickName.."',BankCash=".. _userdata.bank ..",UserInfo1="..data1..",UserInfo2="..data2.." where UserID = ".._uid
-		if #data1 > 30 *1024 then
-			LOG_ERROR("error:用户数据1太大了:".._uid..":"..#data1)
-		end
-		if #data2 > 30 *1024 then
-			LOG_ERROR("error:用户数据2太大了:".._uid..":"..#data2)
-		end
-		for i=1,3 do
-			-- 尝试三次
-			local ok,t = pcall(skynet.call, ".mysqlpool", "lua", "execute", sql)
-			if ok then
-				if t and t.error then
-					LOG_ERROR("save user data to mysql error "..i..":".._uid)
-					luadump(t)
-				else
-					LOG_DEBUG("save user data into mysql now:".._uid..", data1 size:"..#data1..", data2 size:"..#data2)
-					err2 = false
+	if _account_change then
+		local ok, data = pcall(skynet.call, _redis, "lua", "execute", "hget", "USER-ACCOUNT_INFO", _uid .. "#1001")
+		if ok then
+			-- 转换用户金币数据
+			local bankinfo = json.decode(data)
+			if bankinfo and bankinfo ~= "" then
+				bankinfo.aNum = _userdata.gold
+				bankinfo.aBank = _userdata.bank
+				bankinfo.aPassword = _userdata.bankpwd
+				bankinfo.lastChangeTime = os.time()
+				ok = pcall(skynet.call, _redis, "lua", "execute", "hset", "USER-ACCOUNT_INFO", _uid .. "#1001",json.encode(bankinfo))
+				if ok then
+					LOG_DEBUG("修改数据成功")
+					_account_change = false
 				end
-				break
-			else
-				LOG_ERROR("save user data to mysql error "..i..":".._uid)
-			end
-		end
-
-		_need_save = false
-		_not_save_cnt = 0
-		]]
-		err2 = false
-		if err1 or err2 then
-			LOG_ERROR("save userdata error:" .. _uid)
-			luadump(_userdata)
-			local ok, info = pcall(json.encode, _userdata)
-			if ok then
-				log("save_data_error", '{"info":"' .. tostring(info) .. '""}')
-			else
-				LOG_ERROR("userdata encode to json error:" .. tostring(info))
 			end
 		end
 	end
+	-- LOG_DEBUG("check save user data:".._uid..",_need_save="..tostring(_need_save))
+	-- if _need_save then
+	-- 	local err1 = true
+	-- 	local err2 = true
+	-- 	local ok, data = pcall(encode_userdata, _userdata)
+	-- 	if not ok then
+	-- 		LOG_ERROR("save data error uid:" .. _uid .. ",reason:" .. tostring(data))
+	-- 		return
+	-- 	end
+
+	-- 	-- local group = _userdata.group
+	-- 	-- _userdata.group = nil
+	-- 	-- data1 = encode_userdata(_userdata)
+	-- 	-- data2 = encode_userdata(group)
+	-- 	-- _userdata.group = group
+	-- 	for i = 1, 3 do
+	-- 		-- 尝试三次
+	-- 		local ok, result = pcall(skynet.call, _redis, "lua", "execute", "set", "userdata->" .. tostring(_uid), data)
+	-- 		if ok and result then
+	-- 			-- return
+	-- 			-- LOG_DEBUG("save user data into redis now:".._uid..", data size:"..#data)
+	-- 			err1 = false
+	-- 			break
+	-- 		else
+	-- 			LOG_ERROR("save user data to redis error " .. i .. ":" .. _uid)
+	-- 		end
+	-- 	end
+
+	-- 	--[[data1 = mysql.quote_sql_str(data1)
+	-- 	data2 = mysql.quote_sql_str(data2)
+	-- 	local sql = "UPDATE tbl_user_info_"..(_uid%10).." SET NickName='"..
+	-- 	_userdata.nickName.."',BankCash=".. _userdata.bank ..",UserInfo1="..data1..",UserInfo2="..data2.." where UserID = ".._uid
+	-- 	if #data1 > 30 *1024 then
+	-- 		LOG_ERROR("error:用户数据1太大了:".._uid..":"..#data1)
+	-- 	end
+	-- 	if #data2 > 30 *1024 then
+	-- 		LOG_ERROR("error:用户数据2太大了:".._uid..":"..#data2)
+	-- 	end
+	-- 	for i=1,3 do
+	-- 		-- 尝试三次
+	-- 		local ok,t = pcall(skynet.call, ".mysqlpool", "lua", "execute", sql)
+	-- 		if ok then
+	-- 			if t and t.error then
+	-- 				LOG_ERROR("save user data to mysql error "..i..":".._uid)
+	-- 				luadump(t)
+	-- 			else
+	-- 				LOG_DEBUG("save user data into mysql now:".._uid..", data1 size:"..#data1..", data2 size:"..#data2)
+	-- 				err2 = false
+	-- 			end
+	-- 			break
+	-- 		else
+	-- 			LOG_ERROR("save user data to mysql error "..i..":".._uid)
+	-- 		end
+	-- 	end
+
+	-- 	_need_save = false
+	-- 	_not_save_cnt = 0
+	-- 	]]
+	-- 	err2 = false
+	-- 	if err1 or err2 then
+	-- 		LOG_ERROR("save userdata error:" .. _uid)
+	-- 		luadump(_userdata)
+	-- 		local ok, info = pcall(json.encode, _userdata)
+	-- 		if ok then
+	-- 			log("save_data_error", '{"info":"' .. tostring(info) .. '""}')
+	-- 		else
+	-- 			LOG_ERROR("userdata encode to json error:" .. tostring(info))
+	-- 		end
+	-- 	end
+	-- end
 end
 
 local _last_time
@@ -321,7 +255,7 @@ local function time_timer()
 	while true do
 		skynet.sleep(TIMESLICE * 100)
 		_not_save_cnt = _not_save_cnt + 1
-		if _need_save and _not_save_cnt >= SAVE_CNT then
+		if (_need_save or _account_change) and _not_save_cnt >= SAVE_CNT then
 			save_userdata()
 		end
 
@@ -394,7 +328,7 @@ local function update_client_info(...)
 	end
 
 	msg.type = type
-	luadump(msg,"shua xin dan ge xinxi")
+	-- luadump(msg,"shua xin dan ge xinxi")
 	send_to_client("hall.resRefreshInfo", msg)
 end
 
@@ -494,12 +428,12 @@ function CMD.online(uid, node, addr)
 	logic.init(uid, api, _userdata, _p, _redis, _logredis) --调用了datalogic里面的init，传递了用户数据等参数，然后把CMD里面的函数全部复制给api发了过去
 
 	log(
-		"online",
+		"ONLINE",
 		string.format(
-			'{"gold":%d,"bank":%d,"did":"-","ip":"%s","location":"-","client":"-","os":"-"}',
+			'{"gold":%d,"bank":%d,"ip":"%s"}',
 			_userdata.gold or 0,
 			_userdata.bank or 0,
-			ip or "-"
+			_p.ip or "-"
 		)
 	)
 	if _userdata.gm then
@@ -538,7 +472,7 @@ function CMD.online(uid, node, addr)
 			)
 		)
 	end
-	LOG_DEBUG("用户上线成功")
+
 	return true
 end
 
@@ -577,8 +511,8 @@ function CMD.offline(reason)
 	online = false
 	logic.offline(reason)
 	log(
-		"offline",
-		string.format('{"gold":%d,"money":%d,"bank":%d}', _userdata.gold or 0, _userdata.money or 0, _userdata.bank or 0)
+		"OFFLINE",
+		string.format('{"gold":%d,"bank":%d}', _userdata.gold or 0, _userdata.bank or 0)
 	)
 	-- skynet.call(manager, "kick", _uid)
 	-- save_userdata()
@@ -962,7 +896,7 @@ function CMD.sub_gold(uid, gold, reason)
 	update_client_info("gold")
 	--金币变化需要通知到gm服务
 	send_to_gmctrl("gold_change", _uid, 0 - gold, reason)
-	luadump(_userdata,"====")
+
 	local nn = _userdata.nickName
 	pcall(skynet.call, _redis, "lua", "execute", "ZADD", rankname .. "3", _userdata.gold, _uid .. ":" .. nn)
 	return _userdata.gold
@@ -1013,6 +947,68 @@ function CMD.add_gold(uid, gold, reason)
 	local nn = _userdata.nickName
 	pcall(skynet.call, _redis, "lua", "execute", "ZADD", rankname .. "3", _userdata.gold, _uid .. ":" .. nn)
 	return _userdata.gold
+end
+
+--[[
+    @desc: 玩家金币变化
+    author:{author}
+    time:2019-02-16 23:47:11
+    --@uid:id
+	--@gold:变化量
+	--@reason:变化原因同上
+	--@isSend: 是否给客户端发送刷新
+    @return:
+]]
+-- 101 签到奖励
+-- 102 后台操作
+-- 103 商城购买操作（充值）
+-- 104 商城购买额外赠送
+-- 105 开房间消耗
+-- 106 存钱到银行消耗金币
+-- 107 从银行取钱增加金币
+-- 108 首充奖励
+-- 109 存钱失败，返还金币
+-- 1000以上表示游戏内的结算，reason就表示gameid
+function CMD.goldChange(uid, gold, reason, isSend)
+	if uid ~= _uid then
+		return false
+	end
+	if not reason then
+		return false
+	end
+	if not _userdata then
+		return false
+	end
+	gold = tonumber(gold)
+	if not gold then
+		return false
+	end
+	gold = math.floor(gold)
+	if gold == 0 then
+		return false
+	end
+	_userdata.gold = _userdata.gold + gold
+	LOG_DEBUG(uid .. "增加金币：" .. gold .. ",增加之后金币数额:" .. _userdata.gold..",增加原因:"..reason)
+	log(
+		"GOLD_CHANGE",
+		string.format('{"gold":%d,"change":%d,"reason":%d}', _userdata.gold or 0, gold, reason)
+	)
+	_account_change = true
+	if _p then
+		_p.gold = _userdata.gold
+	end
+	if isSend then
+		update_client_info("gold")
+	end
+	--金币变化需要通知到gm服务
+	send_to_gmctrl("gold_change", _uid, gold, reason)
+	--给管理端发消息
+	local data = {
+		uid = _uid,
+		accType = 1001,
+		sendTime = os.time()
+	}
+	pcall(skynet.send,manager,"lua","insertMsg","user.severGoldChange",data)
 end
 
 -- 1001 游戏正常获胜
@@ -1393,13 +1389,6 @@ end
 
 skynet.start(
 	function()
-		-- for fname,f in pairs(logic.CMD) do
-		-- 	if CMD[fname] then
-		-- 		assert(nil, "datalogic.lua中,CMD表,有不合法的函数名:"..fname)
-		-- 	end
-		-- 	CMD[fname] = f
-		-- end
-
 		skynet.dispatch(
 			"lua",
 			function(session, source, command, uid, ...)

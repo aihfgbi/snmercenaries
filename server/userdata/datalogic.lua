@@ -611,6 +611,10 @@ function this.reqRefreshInfo(msg)
     end
 end
 
+function this.adminGiveNewRobot(data)
+    luadump(data,"收到了消息")
+end
+
 --[[
     @desc: 请求游戏列表
     author:{author}

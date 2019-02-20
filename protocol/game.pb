@@ -1,5 +1,5 @@
 
-‚$
+Ë$
 
 game.protogame"²
 player
@@ -84,16 +84,18 @@ resSitDown
 resMJDrawCard
 card (
 cardnum (
-seatid ("%
+seatid ("9
 Opt
 opttype (
-cards ("P
+cards (
+
+fromSeatid ("P
 resMJNotifyPlayerOpt
 seatid (
 timeout (
 opts (2	.game.Opt")
 reqMJPlayerOpt
-opts (2	.game.Opt"‘
+opts (2	.game.Opt" 
 resMJPlayerOpt
 opts (2	.game.Opt
 
@@ -102,7 +104,8 @@ fromSeatid (
 areaid (
 result (
 handnum (
-optcard ("â
+optcard (
+cpnum ("ø
 resMJResult*
 reslist (2.game.resMJResult.resInfo
 winType (
@@ -110,7 +113,8 @@ fromSeatid (
 
 loseSeatid (
 	horseTile (
-hitTiles (Ë
+hitTiles (
+bankerSeatid (Ë
 resInfo
 seatid (
 	handcards (
@@ -123,7 +127,7 @@ loseSeatid (
 winscore	 (
 	gangscore
  (
-gold ("Ú
+gold ("ê
 resMJResume
 status (
 time (
@@ -136,14 +140,15 @@ loseSeatid (
 banker	 (
 shifter
  (
-dices (s
+dices (‚
 	tilesinfo
 uid (
 tilenum (
 	handcards (
 opts (2	.game.Opt
 desk (
-seatid ("
+seatid (
+cpnum ("
 UserOffline
 uid ("
 

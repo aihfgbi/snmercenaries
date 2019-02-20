@@ -128,7 +128,7 @@ local _opt_seatid                   --操作的座位
 local _last_winners                     --上局的赢家
 local _last_losers                      --上局的输家
 local _lose_seatid                      --点炮的座位号
-local _last_scores                      --记录上局所有人输赢分数
+
 local _last_horse_tiles                 --上局抓码牌
 local _last_hit_tiles                       --上局中码的牌
 local _banker_seatid                      --庄位
@@ -140,8 +140,7 @@ local _win_card
 local _last_timer_start
 local _discard_cnt                     --出牌记数
 local _qishouhu                           --是否可以起手胡
---local _genzhuang                       --是否跟庄
-local _genzhuangtile
+
 local _fengpai                          --是否带风
 --local _claim_players                                --可以吃碰杠的玩家信息
 local _table_end = 0                            --整局游戏是否结束
@@ -171,8 +170,10 @@ local CAN_GANG              --是否可以杠
 local CAN_CHI               --是否可以吃
 local CAN_DIAN              --是否可以点炮
 
-local _last_peng_card
-
+local _last_peng_card --记录当前碰的牌，用于碰牌过圈的规则
+local _liuju_num = 14        --最后剩几张牌流局，每杠一次加2
+local _can_dian_player --用于记录可以点炮玩家的座位号
+local _is_game_end --用于记录一炮多响的时候是否已经有人点了胡，好跳转状态
 
 local function fill_table_gameids()
     for k, v in pairs(mj_cfg.room_conf) do
@@ -182,10 +183,18 @@ local function fill_table_gameids()
     end
 end
 
+--[[
+    @desc: 调用userdata里面的加减金币更新用户的金币
+    author:{author}
+    time:2019-01-29 22:50:41
+    --@uid:
+	--@num: 
+    @return:
+]]
 local function update_gold(uid, num)
     local p = _players[uid]
     if not p then return end
-    local opt = num > 0 and "add_gold" or "sub_gold"
+    local opt = "goldChange"
     if not _isTaste then
         local ok, result = pcall(p.call_userdata, p, opt, math.abs(num), _gameid)
         if not ok then
@@ -201,7 +210,7 @@ local function update_gold(uid, num)
         p.ctrlinfo.ctrlnowgold = p.ctrlinfo.ctrlnowgold + num
     --    p.ctrlgold = p.ctrlgold - math.abs(num)
     end
-
+    --记录收益
     if _has_robot and not p.isrobot then
         if num > 0 then
             _ctrlearn = _ctrlearn + num
@@ -212,7 +221,6 @@ local function update_gold(uid, num)
         _ctrlcost = 0
         _ctrlearn = 0
     end
---    LOG_WARNING("update_gold update_gold update_gold has_robot[%s] _ctrlcost[%s] _ctrlearn[%s]", tostring(_has_robot), tostring(_ctrlcost), tostring(_ctrlearn))
 end
 
 local function deal_gold(changed)
@@ -228,6 +236,7 @@ local function deal_gold(changed)
         end
     end
 
+    --当总输赢不一样的时候做的容错处理
     if total_win > total_lose then
         total_win = total_lose
         local len = table.len(changed.win)
@@ -471,7 +480,7 @@ local function build_wall()
     origin_wall, _builded_tiles = mj_build.build_mj_card(SHIFTER1, SHIFTER2, _fengpai)
 --    PRINT_T(_builded_tiles)
     local len = #origin_wall
-    luadump(origin_wall,"origin_wall")
+    -- luadump(origin_wall,"origin_wall")
     _wall = {}
     for i=1,len do
         local j = math.random(1, i)
@@ -481,7 +490,7 @@ local function build_wall()
 
         _wall[j] = origin_wall[i]
     end
-    luadump(_wall,"_wall")
+    -- luadump(_wall,"_wall")
 -----------------------------test---------------------------
     -- -- 1号出5筒 2号吃 3号碰 4号胡
     -- local test_wall = { 19,19,19,19,19,
@@ -535,15 +544,6 @@ end
 --分局数据
 local function init_round_data()
     for k,p in pairs(_players_sit) do
-        p.round_win = 0
-        p.round_winall = 0
-        p.round_lose = 0
-        p.round_ming_gang = 0
-        p.round_an_gang = 0
-        p.round_peng_gang = 0
-        p.round_catch_fire = 0
-        p.round_fire = 0
-
         p.end_score = 0
         p.horse_score = 0
         p.gang_score = 0
@@ -554,10 +554,7 @@ local function init_round_data()
         p.tiles = nil
         p.hold_tiles = nil
         p.discards = nil
-        -- if p.status ~= 1 or _table_end == 1 then
-        --     p.status = 0
-        -- end
-        p.no_win = nil
+
         p.last_draw_tile = nil
         p.qianggang_seatid = nil
         p.gangbaoquanbao_seatid = nil
@@ -589,7 +586,9 @@ local function init_round_data()
     _win_type = nil
     _re_ready_count = 0
     _opt_seatid = nil
-    _genzhuangtile = nil
+    _last_winners = nil
+    _last_losers = nil
+    _is_game_end = false
 --    LOG_WARNING("init_round_data")
 end
 
@@ -609,21 +608,15 @@ end
 
 local function init_player_info(p)
 --    LOG_WARNING("init_player_info [%d]", p.uid)
-    p.win_cnt = 0   --胡别人的牌
-    p.winall_cnt = 0    --自摸胡
-    p.lose_cnt = 0
+
     p.an_gang = 0
     p.ming_gang = 0
     p.peng_gang = 0
-    p.catch_fire = 0
+
     p.fire = 0
     p.score = 0
     p.tiles = nil
     p.hold_tiles = nil
-
-    -- p.round_ming_gang = 0
-    -- p.round_ming_gang = 0
-    -- p.round_ming_gang = 0
 end
 
 local function set_drow_reverse(id)
@@ -661,16 +654,26 @@ local function get_next_seatid(seatid)
     return (seatid + 1) <= _game_cfg.max_player and (seatid + 1) or 1
 end
 
---获取庄位
+--获取庄位 随机庄
 local function get_banker_seatid()
-    if not _last_banker_seatid then
-        return assert(_players[_owner].seatid)
-    end
-    if _last_winners and _last_winners[1] and _last_winners[1] == _last_banker_seatid then
-        return _last_banker_seatid
-    end
+    -- if not _last_banker_seatid then
+    --     return assert(_players[_owner].seatid)
+    -- end
+    -- if _last_winners and _last_winners[1] and _last_winners[1] == _last_banker_seatid then
+    --     return _last_banker_seatid
+    -- end
 
-    return get_next_seatid(_last_banker_seatid)
+    -- return get_next_seatid(_last_banker_seatid)
+    local randnum = RAND_NUM(1,100)
+    if randnum <= 25 then
+        return 1
+    elseif randnum <= 50 then
+        return 2
+    elseif randnum <= 75 then
+        return 3
+    elseif randnum <= 100 then
+        return 4
+    end
 end
 
 --下一个操作的玩家座位号
@@ -719,6 +722,10 @@ end
 
 local function draw_tile(reverse)
     local total_tile_num = #_wall
+    LOG_DEBUG("牌堆剩余数量:"..total_tile_num..",流局牌数量:".._liuju_num)
+    if total_tile_num <= _liuju_num then --达到流局牌数量
+        return
+    end
     if _opt_seatid then
         local player = _players_sit[_opt_seatid] 
         local num = 0
@@ -895,8 +902,8 @@ local function deal_tiles()
     for k,v in ipairs(_players_sit) do
         v.tiles = dispatch_card_by_prior_rate(v)
 
-    --    LOG_DEBUG("[%d] tiles[%s]", v.uid, str)
         osapi.tsort(v.tiles)
+        LOG_DEBUG("[%d] tiles[%s]", v.uid, table.concat( v.tiles, ","))
 --        PRINT_T(v.tiles)
         v:send_msg(
             "game.resMJDealCard",
@@ -960,23 +967,6 @@ local function set_windetail_winfan(info)
     return win_detail, win_fan
 end
 
-local function set_genzhuang_score()
---    _opt_seatid = _opt_seatid or get_next_seatid(_last_discard_seatid)
-    for seatid,v in ipairs(_current_scores) do
-        if seatid == _banker_seatid then
-            v.genzhuang_score = v.genzhuang_score - _base_score * (_game_cfg.max_player - 1)
-        else
-            v.genzhuang_score = v.genzhuang_score + _base_score
-        end
-    end
-end
-
--- --跟庄
--- local function check_genzhuang()
---     if _genzhuang and _discard_cnt == 4 then
---         set_genzhuang_score()
---     end
--- end
 
 --连庄
 local function check_lianzhuang()
@@ -1005,6 +995,47 @@ local function ask_player_discard(p)
     change_game_status(MJ_STATUS.WAITING_PLAYER)
 end
 
+--获取两个玩家的距离
+local function distance_between(a, b)
+    return (b + _game_cfg.max_player - a) % _game_cfg.max_player
+end
+
+local function order_claims_players(ps)
+    _claim_players_new = {}
+
+    local function f(t, num_t, len)
+        if len < 1 then
+            return 1
+        end
+
+        if num_t.opttype > t[len].opttype then
+            return f(t, num_t, len-1)
+        elseif num_t.opttype == t[len].opttype then
+            local num_dis = distance_between(4, num_t.seatid)
+            local t_dis = distance_between(4, t[len].seatid)
+            if num_dis > t_dis then
+                return len + 1
+            else
+                return f(t, num_t, len - 1)
+            end
+        else
+            return len + 1
+        end
+    end
+    
+    for seatid, data in pairs(ps) do
+        for i,v in ipairs(data) do
+            if #_claim_players_new > 0 then
+                local index = f(_claim_players_new, {opttype=v.opttype, seatid=seatid}, #_claim_players_new)
+                osapi.tinsert(_claim_players_new,index, {seatid=seatid, opttype=v.opttype, cards = v.cards})
+            else
+                osapi.tinsert(_claim_players_new, {seatid = seatid, opttype = v.opttype, cards = v.cards})
+            end
+        end
+    end
+ --   PRINT_T(_claim_players_new)
+end
+
 --摸牌
 local function player_drow()
     _opt_seatid = _opt_seatid or get_next_seatid(_last_discard_seatid)
@@ -1026,7 +1057,6 @@ local function player_drow()
         return
     end
     
-    local opts = {{opttype=draw_type, cards={tile}}}
     p.last_draw_tile = tile
     --摸牌成功清除不能出牌和不能碰牌
     p.noPeng = 0
@@ -1035,7 +1065,21 @@ local function player_drow()
     p:send_msg("game.resMJDrawCard", {card = tile, cardnum = #_wall,seatid = p.seatid})
     _tapi.send_except("game.resMJDrawCard", {cardnum = #_wall,seatid = p.seatid}, p.uid)
     _tapi.send_to_all("game.resMJNotifyPlayerOpt", {seatid = p.seatid,timeout = TIME.OPT_TIME/100,opts = {{opttype=OPT_TYPE.DISCARD}}})
-    change_game_status()
+    
+    --自摸检测
+    if mj_deal.check_win_all(p.tiles, tile) then
+        local claims = {}
+        LOG_DEBUG("player[%d] can zimo", p.seatid)
+        claims[p.seatid] = claims[p.seatid] or {}
+        local opts = {opttype = OPT_TYPE.WIN, cards = {tile}}
+        osapi.tinsert(claims[p.seatid], opts)
+        if next(claims) then
+            order_claims_players(claims)
+        end
+        change_game_status(MJ_STATUS.WAITING_CLAIM)
+    else
+        change_game_status()
+    end
 end
 
 --随机出一个赢家
@@ -1085,7 +1129,7 @@ end
 
 local function new_game()
     -- TODO clear round info
-    
+    _liuju_num = 14
     init_scores()
     -- confirm_shifter()
     build_wall()
@@ -1175,87 +1219,79 @@ local function insert_last_draw_tile(p)
     p.last_draw_tile = nil
 end
 
-
-
+--[[
+    @desc: 暗杠分数
+    author:{author}
+    time:2019-02-08 17:50:13
+    --@p: 
+    @return:
+]]
 local function set_an_gang_score(p)
-    -- LOG_DEBUG("set_an_gang_score %d",p.uid)
-    local p_score = _current_scores[p.seatid]
     local score_change = 0
-    local gold_changed = {win={},lose={}}
     if _isUseGold then
-        score_change = base_rule_cfg.an_gang * (_game_cfg.max_player - 1)
-        score_change = p.gold >= score_change and score_change or p.gold
-        gold_changed.win[p.uid] = score_change
-    else
-        score_change = base_rule_cfg.an_gang * _base_score * (_game_cfg.max_player - 1)
-    end
-    p_score.gang_score = p_score.gang_score + score_change
-
-    if _isUseGold then
-        score_change = base_rule_cfg.an_gang
-    else
         score_change = base_rule_cfg.an_gang * _base_score
     end
+
+    _players_sit[p.seatid].gang_score = _players_sit[p.seatid].gang_score + score_change * (_game_cfg.max_player - 1)
     for k,v in pairs(_players_sit) do
-        if k ~= p_score.seatid then
-            _current_scores[k].gang_score = _current_scores[k].gang_score - score_change
-            if _isUseGold then
-                gold_changed.lose[v.uid] = score_change >= v.gold and v.gold or score_change
-            end
+        if v.seatid ~= p.seatid then
+            v.gang_score = v.gang_score - score_change
         end
     end
-    deal_gold(gold_changed)
+    LOG_DEBUG("anganglose==".._players_sit[lose_seatid].gang_score)
+    LOG_DEBUG("angangwin==".._players_sit[p.seatid].gang_score)
 end
 
-local function set_peng_gang_score(p)
-    -- LOG_DEBUG("set_peng_gang_score %d",p.uid)
-    local p_score = _current_scores[p.seatid]
-    local score_change = 0
-    local gold_changed = {win={},lose={}}
-    if _isUseGold then
-        score_change = base_rule_cfg.peng_gang * (_game_cfg.max_player - 1)
-        score_change = p.gold >= score_change and score_change or p.gold
-        gold_changed.win[p.uid] = score_change
-    else
-        score_change = base_rule_cfg.peng_gang * _base_score * (_game_cfg.max_player - 1)
-    end
-    p_score.gang_score = p_score.gang_score + score_change
-    if _isUseGold then
-        score_change = base_rule_cfg.peng_gang
-    else
-        score_change = base_rule_cfg.peng_gang * _base_score
-    end
-    for k,v in pairs(_players_sit) do
-        if k ~= p_score.seatid then
-            _current_scores[k].gang_score = _current_scores[k].gang_score - score_change
-            if _isUseGold then
-                gold_changed.lose[v.uid] = score_change >= v.gold and v.gold or score_change
-            end
-        end
-    end
-    deal_gold(gold_changed)
-end
-
+--[[
+    @desc: 明杠分数
+    author:{author}
+    time:2019-02-08 17:49:05
+    --@p:
+	--@lose_seatid: 
+    @return:
+]]
 local function set_ming_gang_score(p, lose_seatid)
-    -- LOG_DEBUG("set_ming_gang_score %d",p.uid)
-    local p_score = _current_scores[p.seatid]
     local score_change = 0
-    local gold_changed = {win={},lose={}}
     if _isUseGold then
-        score_change = base_rule_cfg.ming_gang
-        score_change = p.gold >= score_change and score_change or p.gold
-        gold_changed.win[p.uid] = score_change
-    else
-        score_change = base_rule_cfg.ming_gang * _base_score * (_game_cfg.max_player - 1)
+        score_change = base_rule_cfg.ming_gang * _base_score
     end
-    p_score.gang_score = p_score.gang_score + score_change
-    loser_score = _current_scores[lose_seatid]
-    loser_score.gang_score = loser_score.gang_score - score_change
-    if _isUseGold then
-        local loser = _players_sit[lose_seatid]
-        gold_changed.lose[loser.uid] = score_change >= loser.gold and loser.gold or score_change
+    _players_sit[p.seatid].gang_score = _players_sit[p.seatid].gang_score + score_change
+    _players_sit[lose_seatid].gang_score = _players_sit[lose_seatid].gang_score - score_change
+    LOG_DEBUG("minglose==".._players_sit[lose_seatid].gang_score)
+    LOG_DEBUG("mingwin==".._players_sit[p.seatid].gang_score)
+end
+
+--[[
+    @desc: 补杠分数，碰的谁的牌谁给钱，由于跟明杠一样逻辑，直接调用，留这个函数预防修改规则
+    author:{author}
+    time:2019-02-08 17:47:05
+    --@p:
+	--@lose_seatid: 
+    @return:
+]]
+local function set_peng_gang_score(p,lose_seatid)
+    set_ming_gang_score(p, lose_seatid)
+end
+
+
+
+--[[
+    @desc: 找出最大的数字
+    author:{author}
+    time:2019-01-28 23:30:53
+    @return:
+]]
+local function get_max_num(list)
+    if type(list) ~= "table" then
+       return 0
     end
-    deal_gold(gold_changed)
+    local mnum = 0
+    for k,v in pairs(list) do
+        if v > mnum then
+            mnum = v
+        end
+    end
+    return mnum
 end
 
 --[[
@@ -1334,25 +1370,17 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
    
     if opttype == OPT_TYPE.LIGHT_GANG then
         p.ming_gang = p.ming_gang + 1
-        p.round_ming_gang = p.round_ming_gang + 1
     elseif opttype == OPT_TYPE.PENG_GANG then
         p.peng_gang = p.peng_gang + 1
-        p.round_peng_gang = p.round_peng_gang + 1
     elseif opttype == OPT_TYPE.BLACK_GANG then
         p.an_gang = p.an_gang + 1
-        p.round_an_gang = p.round_an_gang + 1
+
     end
 
     --记录吃碰次数
     p.chipengRecord[_last_discard_seatid] = p.chipengRecord[_last_discard_seatid] + 1
     --找出当前最大的吃碰次数
-    local maxCpnum = 0
-    local cplist = p.chipengRecord
-    for k,v in pairs(cplist) do
-        if v > maxCpnum then
-            maxCpnum = v
-        end
-    end
+    local maxCpnum = get_max_num(p.chipengRecord)
 
     _tapi.send_to_all(
         "game.resMJPlayerOpt",
@@ -1374,10 +1402,7 @@ local function player_move_tiles_to_hold(p, tiles, cnt, opttype)
     return true
 end
 
---获取两个玩家的距离
-local function distance_between(a, b)
-    return (b + _game_cfg.max_player - a) % _game_cfg.max_player
-end
+
 
 --出牌
 local function discard(p, tile)
@@ -1396,6 +1421,7 @@ local function discard(p, tile)
     else
         local pos = has_tile(p.tiles, tile)
         if not pos then 
+            luadump(p.tiles,"位置:"..p.seatid)
             LOG_DEBUG("player[%d] discard[%s] error pos is nil", p.uid, tostring(tile))
             return 
         end
@@ -1407,18 +1433,7 @@ local function discard(p, tile)
     clear_drow_reverse()
     p.discards = p.discards or {}
     osapi.tinsert(p.discards, tile)
-    --跟庄
-    if p.seatid == _banker_seatid then
-        _genzhuangtile = tile
-    else
-        if _genzhuangtile and tile == _genzhuangtile then
-            if get_next_seatid(p.seatid) == _banker_seatid then
-                set_genzhuang_score()
-            end
-        else
-            _genzhuangtile = nil
-        end
-    end
+
     -- if _genzhuang and _last_discard_tile and _last_discard_tile ~= tile then
     --     _genzhuang = false
     -- end
@@ -1511,47 +1526,12 @@ local function player_an_gang(p, tile)
     insert_last_draw_tile(p)
 
     p.an_gang = p.an_gang + 1
-    p.round_an_gang = p.round_an_gang + 1
+    _liuju_num = _liuju_num + 2
+
     LOG_DEBUG("player[%d] an gang card[%d]", p.uid, tile)
     set_drow_reverse(p.uid)
     set_an_gang_score(p)
     change_game_status(MJ_STATUS.PLAYER_OPT)
-end
-
-local function order_claims_players(ps)
-    _claim_players_new = {}
-
-    local function f(t, num_t, len)
-        if len < 1 then
-            return 1
-        end
-
-        if num_t.opttype > t[len].opttype then
-            return f(t, num_t, len-1)
-        elseif num_t.opttype == t[len].opttype then
-            local num_dis = distance_between(4, num_t.seatid)
-            local t_dis = distance_between(4, t[len].seatid)
-            if num_dis > t_dis then
-                return len + 1
-            else
-                return f(t, num_t, len - 1)
-            end
-        else
-            return len + 1
-        end
-    end
-    
-    for seatid, data in pairs(ps) do
-        for i,v in ipairs(data) do
-            if #_claim_players_new > 0 then
-                local index = f(_claim_players_new, {opttype=v.opttype, seatid=seatid}, #_claim_players_new)
-                osapi.tinsert(_claim_players_new,index, {seatid=seatid, opttype=v.opttype, cards = v.cards})
-            else
-                osapi.tinsert(_claim_players_new, {seatid = seatid, opttype = v.opttype, cards = v.cards})
-            end
-        end
-    end
- --   PRINT_T(_claim_players_new)
 end
 
 --抢杠胡
@@ -1605,7 +1585,7 @@ local function check_qiangminggang(p, tile)
     end
 end
 
---碰杠
+--玩家操作补(碰)杠，要等待枪杠信息，如果没有人抢才算杠成功
 local function player_peng_gang(p, t)
     if not p or p.seatid ~= _opt_seatid or not p.hold_tiles then 
         LOG_DEBUG("not p or p.seatid[%d] ~= _opt_seatid[%d]", p.seatid or -1, _opt_seatid or -1)
@@ -1631,40 +1611,6 @@ local function player_peng_gang(p, t)
     _qianggang_info = {player = p, tile = t}
     check_qiangganghu(p, t)
     change_game_status(MJ_STATUS.WAITING_CLAIM)
-    -- for i,v in ipairs(p.hold_tiles) do
-    --     if v.opttype == OPT_TYPE.PENG and v.cards[1] == t then
-    --         if p.last_draw_tile == t then
-    --             p.last_draw_tile = nil
-    --         else
-    --             local pos = has_tile(p.tiles, t)
-    --             if not pos then return end
-    --             osapi.tremove(p.tiles, pos)
-    --         end
-
-    --         v.opttype = OPT_TYPE.PENG_GANG
-    --         osapi.tinsert(v.cards, t)
-    --         _tapi.send_to_all("game.MJCardMove", {cards       = v.cards,
-    --                                             fromSeatid = v.fromSeatid,
-    --                                             toSeatid   = p.seatid,
-    --                                             areaid      = TILE_AREA.HOLD,
-    --                                             opttype     = OPT_TYPE.PENG_GANG
-    --                                             })
-            
-    --         insert_last_draw_tile(p)
-
-    --         -- if check_win_kong(t) then
-    --         --     _game_status = GAME_STATUS.GAME_END
-    --         -- else
-    --         p.peng_gang = p.peng_gang + 1
-    --         p.round_peng_gang = p.round_peng_gang + 1
-    --         set_peng_gang_score(p)
-    --         --_game_status = GAME_STATUS.PLAYER_OPT
-    --         set_drow_reverse()
-    --         change_game_status(MJ_STATUS.PLAYER_OPT)
-    --         --end
-    --         break
-    --     end
-    -- end
 end
 
 local function peng_gang()
@@ -1683,16 +1629,9 @@ local function peng_gang()
             v.opttype = OPT_TYPE.PENG_GANG
             osapi.tinsert(v.cards, t)
 
-            --记录吃碰次数
-            p.chipengRecord[v.fromSeatid] = p.chipengRecord[v.fromSeatid] + 1
+            --碰的时候已经记录了不用再次记录次数
             --找出当前最大的吃碰次数
-            local maxCpnum = 0
-            local cplist = p.chipengRecord
-            for k,v in pairs(cplist) do
-                if v > maxCpnum then
-                    maxCpnum = v
-                end
-            end
+            local maxCpnum = get_max_num(p.chipengRecord)
             
             _tapi.send_to_all(
                 "game.resMJPlayerOpt",
@@ -1714,8 +1653,8 @@ local function peng_gang()
             --     _game_status = GAME_STATUS.GAME_END
             -- else
             p.peng_gang = p.peng_gang + 1
-            p.round_peng_gang = p.round_peng_gang + 1
-            set_peng_gang_score(p)
+            _liuju_num = _liuju_num + 2
+            set_peng_gang_score(p,v.fromSeatid)
             --_game_status = GAME_STATUS.PLAYER_OPT
             set_drow_reverse(p.uid)
             change_game_status(MJ_STATUS.PLAYER_OPT)
@@ -1733,7 +1672,7 @@ local function player_chi(p, tiles)
         return 
     end
     if player_move_tiles_to_hold(p, tiles, 3, OPT_TYPE.CHI) then
-        p.no_win = nil
+
         ask_player_discard(p)
     end
 end
@@ -1741,7 +1680,7 @@ end
 --碰
 local function player_peng(p, tile)
     if player_move_tiles_to_hold(p, {tile}, 3, OPT_TYPE.PENG) then
-        p.no_win = nil
+
         ask_player_discard(p)
     end
 end
@@ -1751,10 +1690,8 @@ local function player_ming_gang( p, tile )
     if player_move_tiles_to_hold(p, {tile}, 4, OPT_TYPE.LIGHT_GANG) then
         _opt_seatid = p.seatid
         p.ming_gang = p.ming_gang + 1
-        p.round_ming_gang = p.round_ming_gang + 1
-
-        p.no_win = nil
         p.minggang_seatid = _last_discard_seatid
+        _liuju_num = _liuju_num + 2
         set_ming_gang_score(p, _last_discard_seatid)
         set_drow_reverse(p.uid)
         change_game_status(MJ_STATUS.PLAYER_OPT)
@@ -1789,13 +1726,11 @@ local function player_win_all(p, qianggangtile)
     if base_rule_cfg.qianggangquanbao and base_rule_cfg.qianggangquanbao > 0 and _qianggang_info then
         p.qianggang_seatid = _qianggang_info.player.seatid
     end
-    --用于天胡地胡的判断
+    --天胡的判断
     local qishouhu_info
     if _qishouhu then
         if p.seatid == _banker_seatid then
             qishouhu_info = {tianhu = 1}
-        else
-            qishouhu_info = {dihu = 1}
         end
     end
     local gangkaihua = (_drow_reverse_uid == p.uid)
@@ -1806,16 +1741,8 @@ local function player_win_all(p, qianggangtile)
     -- PRINT_T(win_detail)
     -- PRINT_T(win_fan)
 
-    -- --杠上开花
-    -- if _play_type_info.gangshangkaihua and _drow_reverse_uid == p.uid then
-    --     osapi.tinsert(win_detail, 100)
-    --     osapi.tinsert(win_fan, )
-    -- end
-
-    p.winall_cnt = p.winall_cnt + 1
-    p.round_winall = p.round_winall + 1
     -- p.win = p.win + 1
-    p.round_win = p.round_win + 1
+
     p.win_detail = win_detail
     p.win_fan = win_fan
     if gangkaihua then
@@ -1828,31 +1755,44 @@ local function player_win_all(p, qianggangtile)
     
     _win_card = win_tile
     _lose_seatid = p.seatid
-
+    --把赢的牌插入到赢的人手里
+    osapi.tinsert(p.tiles,_win_card)
     table.clear(_last_winners)
     _last_winners = {p.seatid}
     _last_losers = {}
     for i,user in ipairs(_players_sit) do
         if i ~= p.seatid then
-            user.lose_cnt = user.lose_cnt + 1
-            user.round_lose = user.round_lose + 1
             user.win_fan = win_fan
             osapi.tinsert(_last_losers, i)
         end
     end
-    LOG_DEBUG("自摸")
+    --需要广播胡牌成功
+    local msg = {
+        opts = {
+            opttype = OPT_TYPE.WIN,
+            cards = {_win_card}
+        },
+        fromSeatid = p.seatid,
+        toSeatid = p.seatid,
+        handnum = #p.tiles,
+        optcard = _win_card
+    }
+    _tapi.send_to_all("game.resMJPlayerOpt", msg)
+
     change_game_status(MJ_STATUS.GAME_END)
 end
 
---点炮胡
+--点炮胡,需要测试一炮多响
 function players_win(p)
-    table.clear(_last_winners)
-
-    p.win_cnt = p.win_cnt + 1
-    p.round_win = p.round_win + 1
-    p.catch_fire = p.catch_fire + 1
-    p.round_catch_fire = p.round_catch_fire + 1
-    local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile)
+    _is_game_end = true
+    --地和判断
+    local qishouhu_info
+    if _qishouhu then
+        if _last_discard_seatid == _banker_seatid then
+            qishouhu_info = {dihu = 1}
+        end
+    end
+    local detail_info = mj_deal.get_win_details(p.tiles, p.hold_tiles, _last_discard_tile,qishouhu_info)
     local win_detail, win_fan = set_windetail_winfan(detail_info)
     _last_winners = _last_winners or {}
     osapi.tinsert(_last_winners, p.seatid)
@@ -1861,17 +1801,37 @@ function players_win(p)
 
     local loser_tile = _last_discard_tile
     local loser = _players_sit[_last_discard_seatid]
-    loser.lose_cnt = loser.lose_cnt + 1
-    loser.round_lose = loser.round_lose + 1
+
     loser.fire = loser.fire + 1
-    loser.round_fire = loser.round_fire + 1
     
     _last_losers = {_last_discard_seatid}
     _lose_seatid = _last_discard_seatid
     _win_type = WIN_TYPE.OTHER
     _win_card = loser_tile
 
-    change_game_status(MJ_STATUS.GAME_END)
+    --把赢的牌插入到赢的人手里
+    osapi.tinsert(p.tiles,_win_card)
+    --一炮多响判断
+    local pos = osapi.tindexof(_can_dian_player,p.seatid)
+    if pos then
+        osapi.tremove(_can_dian_player,pos)
+    end
+    --需要广播胡牌成功
+    local msg = {
+        opts = {
+            opttype = OPT_TYPE.WIN,
+            cards = {_win_card}
+        },
+        fromSeatid = _last_discard_seatid,
+        toSeatid = p.seatid,
+        handnum = #p.tiles,
+        optcard = _win_card
+    }
+    _tapi.send_to_all("game.resMJPlayerOpt", msg)
+    --如果胡牌的人都选择完了，改变状态
+    if #_can_dian_player == 0 then
+        change_game_status(MJ_STATUS.GAME_END)
+    end
 end
 
 --询问玩家吃碰杠
@@ -2005,10 +1965,20 @@ local function player_claim_give_up(seatid)
     -- table.remove(_claim_players, i)
     _opt_seatid = nil
     local p = _players_sit[seatid]
-    p:send_msg("game.resMJPlayerOpt", { opts = {opttype = OPT_TYPE.PASS},result = 1 })
+    p:send_msg("game.resMJPlayerOpt", { opts = {opttype = OPT_TYPE.PASS}})
     if _last_peng_card then --碰牌过圈规则
         p.noPeng = _last_peng_card
         _last_peng_card = nil
+    end
+    --一炮多响判断
+    local pos = osapi.tindexof(_can_dian_player,seatid)
+    if pos then
+        osapi.tremove(_can_dian_player,pos)
+        --如果胡牌的人都选择完了，改变状态,这里必须经过删的动作才能判断是否游戏结束，否则会有问题
+        if #_can_dian_player == 0 then
+            change_game_status(MJ_STATUS.GAME_END)
+            return
+        end
     end
     change_game_status(MJ_STATUS.WAITING_CLAIM)
 end
@@ -2020,28 +1990,25 @@ function check_player_claim(now)
     -------------
     local claims = {}
     local opts
+    _can_dian_player = nil
+    _can_dian_player = {}
     for k,p in pairs(_players_sit) do
         if k ~= _last_discard_seatid then
             if CAN_DIAN and mj_deal.check_win_one(p.tiles, _last_discard_tile) then
                 LOG_DEBUG("PLAYER : %s win one, last discard tile %s", tostring(p.uid), tostring(_last_discard_tile))
-                -- if p.no_win then
-                --     send_msg(p.seatid,"majiang.PlayerOptNtf",{seatid = p.seatid,timeout = 0,opts = {{opttype=TYPE_MISS_WIN}}})
-                -- else
                 claims[k] = claims[k] or {}
                 opts   = {opttype  = OPT_TYPE.WIN, cards = {_last_discard_tile}}
                 osapi.tinsert(claims[k], opts)
-                --end
+                osapi.tinsert(_can_dian_player,p.seatid)
             end
 
             if CAN_GANG and mj_deal.check_kong(p.tiles, _last_discard_tile) then
                 claims[k] = claims[k] or {}
-                LOG_DEBUG("玩家可以杠===".._last_discard_tile)
                 opts = {opttype=OPT_TYPE.LIGHT_GANG, cards={_last_discard_tile}}
                 osapi.tinsert(claims[k], opts)
             end
 
             if CAN_PENG and mj_deal.check_pung(p.tiles, _last_discard_tile) then
-                LOG_DEBUG("玩家可以碰===".._last_discard_tile)
                 claims[k] = claims[k] or {}
                 opts = {opttype=OPT_TYPE.PENG, cards={_last_discard_tile}}
                 osapi.tinsert(claims[k], opts)
@@ -2052,7 +2019,6 @@ function check_player_claim(now)
             if CAN_CHI and p.seatid == (_last_discard_seatid % _game_cfg.max_player + 1) then
                 local chows = mj_deal.check_chow(p.tiles, _last_discard_tile)
                 if chows and #chows > 0 then
-                    LOG_DEBUG("玩家可以吃===".._last_discard_tile)
                      claims[k] = claims[k] or {}
                      opts = {opttype=OPT_TYPE.CHI, cards=chows}
                      osapi.tinsert(claims[k], opts)
@@ -2062,50 +2028,6 @@ function check_player_claim(now)
     end
     if next(claims) then
         order_claims_players(claims)
-    end
-end
-
-
-function show_lose_cards()
-    local p = _players_sit[_opt_seatid]
-    if _win_type == WIN_TYPE.DISBAND and p then
-        osapi.tinsert(p.tiles, p.last_draw_tile)
-    end
-    local showncards = {}
-
-    for k,v in ipairs(_players_sit) do
-        -- if not _last_winners or not osapi.tindexof(_last_winners,v.seatid) then
-        --     osapi.tinsert(showncards, { seatid    = v.seatid,
-        --                           handcards = v.tiles,
-        --                           angang    = get_an_gang(v),
-        --                         })
-        -- end
-
-        osapi.tinsert(showncards, { seatid = v.seatid,
-                              handcards = v.tiles,
-                              angang    = get_an_gang(v),
-                                })
-    end
-    
-    --_tapi.send_to_all("game.MJShowCards",{showncards = showncards})
-end
-
---连庄分数
-local function set_lianzhuang_score()
-    local winner = _players_sit[_last_winners[1]]
-    if base_rule_cfg.jiejiegao and base_rule_cfg.jiejiegao > 0 and winner.lianzhuang_cnt and winner.lianzhuang_cnt > 0 then
-        _current_scores[winner.seatid].lianzhuang_score = _current_scores[winner.seatid].lianzhuang_score + winner.lianzhuang_cnt * 2 * (_game_cfg.max_player - 1)
-        if winner.gangbaoquanbao_seatid then
-            _current_scores[winner.gangbaoquanbao_seatid].lianzhuang_score = 0 - _current_scores[winner.seatid].lianzhuang_score
-        elseif winner.qianggang_seatid then
-            _current_scores[winner.qianggang_seatid].lianzhuang_score = 0 - _current_scores[winner.seatid].lianzhuang_score
-        else
-            for seatid,v in ipairs(_current_scores) do
-                if seatid ~= winner.seatid then
-                    v.lianzhuang_score = v.lianzhuang_score - winner.lianzhuang_cnt * 2
-                end
-            end
-        end
     end
 end
 
@@ -2122,62 +2044,186 @@ local function set_end_scores()
         for _,v in ipairs(t) do
             f = f + v
         end
+        if f == 0 then
+            return 1
+        end
         return f
     end
 
-    if _win_type == WIN_TYPE.OWN or _win_type == WIN_TYPE.GANG or _win_type == WIN_TYPE.GANGSHANGKAIHUA then
---        LOG_WARNING("set own win score")
-        local winner = _players_sit[_last_winners[1]]
-        add_win(winner)
-        --无鬼加倍
-        local shifter_cnt = cal_shifter_cnt(winner.tiles)
-        local fan = cal_fan(winner.win_fan) 
-        -- local wuguifan = 1
-        -- --只有平胡下才有无鬼加倍
-        -- if base_rule_cfg.wuguijiabei > 0 and _play_type_info.shifter_type > 0 and shifter_cnt == 0 then
-        --     wuguifan = 2
-        -- end
-        local gangshangkaihua = 0
-        if _win_type == WIN_TYPE.GANGSHANGKAIHUA and _play_type_info.gangshangkaihua then
-            gangshangkaihua = 2
-        end
---        LOG_WARNING("gangshangkaihua[%d], fan[%d]", gangshangkaihua, fan)
-        local win_score = (base_rule_cfg.win_own + gangshangkaihua + fan)* _base_score
-        
-        if _current_scores[winner.seatid].horse_score < 0 then
-            win_score = win_score * math.abs(_current_scores[winner.seatid].horse_score)
-        else
-            win_score = win_score + _current_scores[winner.seatid].horse_score
-        end
---        PRINT_T(winner)
-        _current_scores[winner.seatid].end_score = (_game_cfg.max_player - 1) * win_score
-        local lose_score = 0
-        --策划说金币不要全包了
-        if not _isUseGold and winner.gangbaoquanbao_seatid then
-            _current_scores[winner.gangbaoquanbao_seatid].end_score = lose_score - _current_scores[winner.seatid].end_score
-        elseif not _isUseGold and winner.qianggang_seatid then
-            _current_scores[winner.qianggang_seatid].end_score = lose_score - _current_scores[winner.seatid].end_score
-        else
-            for _,seatid in ipairs(_last_losers) do
-                _current_scores[seatid].end_score = lose_score - win_score
+    --获取跟自己有吃碰3次关系的人
+    local function get_chipeng_seats(p)
+        local seatlist = {0,0,0,0}
+        --检测自己吃碰其他人的
+        for k,v in pairs(p.chipengRecord) do
+            if k ~= p.seatid and v >= 3 then
+                seatlist[k] = 1
             end
         end
-    end
-  
-    if _win_type == WIN_TYPE.OTHER then
-        local lose_score = 0
-        for _,seatid in ipairs(_last_winners) do
-            local winner = _players_sit[seatid]
-            local shifter_cnt = cal_shifter_cnt(winner.tiles)
-         --   local wuguifan = (base_rule_cfg.wuguijiabei > 0 and shifter_cnt == 0) and 2 or 1
-            local fan = cal_fan(winner.win_fan) 
-            _current_scores[seatid].end_score = base_rule_cfg.win_other * _base_score * fan 
-            lose_score = lose_score - base_rule_cfg.win_other * _base_score * fan 
-            add_win(winner)
+        --检测自己的上家有没有吃碰自己3次
+        local s1 = (p.seatid - 1 == 0) and 4 or (p.seatid - 1)
+        local record = _players_sit[s1].chipengRecord
+        if record[p.seatid] >= 3 then
+            seatlist[s1] = 1
+        end
+        --检查自己的下家有没有吃碰自己3次
+        s1 = (p.seatid + 1 == 5) and 1 or (p.seatid + 1)
+        record = _players_sit[s1].chipengRecord
+        if record[p.seatid] >= 3 then
+            seatlist[s1] = 1
         end
 
-        _current_scores[_last_losers[1]].end_score = lose_score
+        return seatlist
     end
+
+    luadump(base_rule_cfg,"base_rule_cfg==")
+    LOG_DEBUG("_base_score=".._base_score)
+    --自摸:闲家自摸，所有闲家输底分*2，庄家输底分*3，庄家自摸所有闲家输底分*3
+    if _win_type == WIN_TYPE.OWN or _win_type == WIN_TYPE.GANGSHANGKAIHUA then
+        local widx = _last_winners[1]
+        
+        local fan = cal_fan(_players_sit[widx].win_fan) --赢家获得的总番数
+        local winScore = 0
+        --输赢分数
+        luadump(_players_sit[widx].win_detail,"赢家获得的类型")
+        luadump(_players_sit[widx].win_fan,"赢家获得的总番数")
+        LOG_DEBUG("fan="..fan)
+
+        -- 查看赢家和其他人的吃碰3次关系
+        local seatlist = get_chipeng_seats(_players_sit[widx])
+        luadump(seatlist,"自摸吃碰关系".._players_sit[widx].uid)
+        --先检测是否有人可以包全场,分数乘以2，bu包杠分，没关系的人不用给分
+        local cpcount = 0 --记录是否有人包分
+        for k,v in pairs(seatlist) do
+            if k ~= widx and v == 1 then
+                cpcount = cpcount + 1
+            end
+        end
+        
+        if widx == _banker_seatid then --庄家赢了
+            winScore = (base_rule_cfg.win_own + 1) * _base_score * fan --如果是庄家赢了
+            for k,v in pairs(seatlist) do
+                if k ~= widx then
+                    if v == 1 then
+                        local tmpScore = winScore * 2 * (_game_cfg.max_player - 1)
+                        _players_sit[k].end_score = _players_sit[k].end_score - tmpScore
+                        _players_sit[widx].end_score = _players_sit[widx].end_score + tmpScore
+                    end
+                end
+            end
+
+            if cpcount == 0 then --没有人包分，正常计算分数
+                for k,v in pairs(_players_sit) do
+                    if k ~= widx then
+                        v.end_score = v.end_score - winScore
+                        _players_sit[widx].end_score = _players_sit[widx].end_score + winScore
+                    end
+                end
+            end
+        else --闲家赢了
+            local bankerAdd = 0
+            for k,v in pairs(_players_sit) do
+                if k ~= widx then
+                    bankerAdd = (k == _banker_seatid and 1 or 0)
+                    winScore = (base_rule_cfg.win_own + bankerAdd) * _base_score * fan
+                    if cpcount > 0 and seatlist[k] == 1 then --有人包分
+                        local tmpScore = winScore * 2 * (_game_cfg.max_player - 1)
+                        v.end_score = v.end_score - tmpScore
+                        _players_sit[widx].end_score = _players_sit[widx].end_score + tmpScore
+                    elseif cpcount == 0 then --正常算分
+                        v.end_score = v.end_score - winScore
+                        _players_sit[widx].end_score = _players_sit[widx].end_score + winScore
+                    end
+                end
+            end
+        end
+    elseif _win_type == WIN_TYPE.OTHER or _win_type == WIN_TYPE.GANG then --放炮
+        -- 闲家点炮给闲家底分*3，闲家点炮给庄家底分*4，庄家点炮给闲家底分*4
+        -- 如果点炮的人跟接炮的人有吃碰关系，输赢的分*2，同时其他跟接炮人有吃碰关系的都要给分
+        local lose_score = 0
+        local bankerAdd = 0
+        for _,seatid in ipairs(_last_winners) do
+            local winner = _players_sit[seatid]
+            local fan = cal_fan(winner.win_fan)
+            luadump(winner.win_detail,"放炮赢家获得的类型")
+            luadump(winner.win_fan,"放炮赢家获得的总番数")
+            LOG_DEBUG("放炮fan="..fan)
+            bankerAdd = (seatid == _banker_seatid and 1 or 0)
+            local tmpEndScore = (base_rule_cfg.win_other + bankerAdd) * _base_score * fan
+            
+            --获取跟赢家有吃碰关系的人的座位
+            local seatlist = get_chipeng_seats(winner)
+            luadump(seatlist,"点炮吃碰关系"..winner.uid)
+            --其他跟赢家有3次关系的人也要输分给赢家
+            for k,v in pairs(seatlist) do 
+                if k ~= _last_losers[1] and v == 1 and k ~= seatid then
+                    _players_sit[seatid].end_score = _players_sit[seatid].end_score + tmpEndScore
+                    _players_sit[k].end_score = _players_sit[k].end_score - tmpEndScore
+                end
+            end
+            --如果点炮的人跟赢家有吃碰3次关系，分数*2
+            if seatlist[_last_losers[1]] == 1 then 
+                tmpEndScore = tmpEndScore * 2
+            end
+
+            _players_sit[seatid].end_score = _players_sit[seatid].end_score + tmpEndScore
+            lose_score = lose_score - tmpEndScore
+        end
+        _players_sit[_last_losers[1]].end_score = lose_score
+    end
+
+--     if _win_type == WIN_TYPE.OWN or _win_type == WIN_TYPE.GANG or _win_type == WIN_TYPE.GANGSHANGKAIHUA then
+-- --        LOG_WARNING("set own win score")
+--         local winner = _players_sit[_last_winners[1]]
+--         add_win(winner)
+--         --无鬼加倍
+--         local shifter_cnt = cal_shifter_cnt(winner.tiles)
+--         local fan = cal_fan(winner.win_fan) 
+--         -- local wuguifan = 1
+--         -- --只有平胡下才有无鬼加倍
+--         -- if base_rule_cfg.wuguijiabei > 0 and _play_type_info.shifter_type > 0 and shifter_cnt == 0 then
+--         --     wuguifan = 2
+--         -- end
+--         local gangshangkaihua = 0
+--         if _win_type == WIN_TYPE.GANGSHANGKAIHUA and _play_type_info.gangshangkaihua then
+--             gangshangkaihua = 2
+--         end
+-- --        LOG_WARNING("gangshangkaihua[%d], fan[%d]", gangshangkaihua, fan)
+--         local win_score = (base_rule_cfg.win_own + gangshangkaihua + fan)* _base_score
+        
+--         if _current_scores[winner.seatid].horse_score < 0 then
+--             win_score = win_score * math.abs(_current_scores[winner.seatid].horse_score)
+--         else
+--             win_score = win_score + _current_scores[winner.seatid].horse_score
+--         end
+-- --        PRINT_T(winner)
+--         _current_scores[winner.seatid].end_score = (_game_cfg.max_player - 1) * win_score
+--         local lose_score = 0
+--         --策划说金币不要全包了
+--         if not _isUseGold and winner.gangbaoquanbao_seatid then
+--             _current_scores[winner.gangbaoquanbao_seatid].end_score = lose_score - _current_scores[winner.seatid].end_score
+--         elseif not _isUseGold and winner.qianggang_seatid then
+--             _current_scores[winner.qianggang_seatid].end_score = lose_score - _current_scores[winner.seatid].end_score
+--         else
+--             for _,seatid in ipairs(_last_losers) do
+--                 _current_scores[seatid].end_score = lose_score - win_score
+--             end
+--         end
+--     end
+  
+--     if _win_type == WIN_TYPE.OTHER then
+--         local lose_score = 0
+--         for _,seatid in ipairs(_last_winners) do
+--             local winner = _players_sit[seatid]
+--             local shifter_cnt = cal_shifter_cnt(winner.tiles)
+--          --   local wuguifan = (base_rule_cfg.wuguijiabei > 0 and shifter_cnt == 0) and 2 or 1
+--             local fan = cal_fan(winner.win_fan) 
+--             _current_scores[seatid].end_score = base_rule_cfg.win_other * _base_score * fan 
+--             lose_score = lose_score - base_rule_cfg.win_other * _base_score * fan 
+--             add_win(winner)
+--         end
+
+--         _current_scores[_last_losers[1]].end_score = lose_score
+--     end
 end
 
 local function set_horse_scores()
@@ -2231,17 +2277,6 @@ local function set_horse_scores()
     end
     _current_scores[seatid].horse_score = horse_score
 
-    -- if not _last_bonus_tiles then return end
-
-    -- set_hit_tiles()
-
-    -- local total_hit_scores = 0
-    -- for _,v in pairs(_last_winners) do
-    --     _current_scores[v].hit_score = #_last_hit_tiles * #_last_losers * HIT_RATE * _base_score
-    --     total_hit_scores = total_hit_scores + _current_scores[v].hit_score
-    -- end
-
-   
 end
 
 --抓码
@@ -2261,73 +2296,26 @@ end
 --     return bonus_tiles
 -- end
 
-local function update_player_score()
- 
-    for k,v in pairs(_current_scores) do
-        local p = _players_sit[k]
-       
-        local count = 1
-        if v.end_score < 0 then
-            count = #_last_winners
-        end
-        
-        p.end_score = p.end_score + v.end_score
-        p.gang_score = p.gang_score + v.gang_score
-        p.horse_score = v.horse_score
-        p.genzhuang_score = v.genzhuang_score
-        p.lianzhuang_score = v.lianzhuang_score
-        if _isUseGold then
-            p.score = p.score + v.end_score + v.genzhuang_score + v.lianzhuang_score
-        else
-            p.score = p.score + v.end_score + v.gang_score + v.genzhuang_score + v.lianzhuang_score
-        end
-        
-    --    p.profit = p.profit + v.end_score + v.hit_score + v.gang_score
-       -- end
-    end
-end
-
--- local function check_game_settle()
---     -- for k,v in pairs(_players_sit) do
-
---     --     if v.score <= 0 then
---     --         -- settle = true
---     --         LOG_DEBUG("player score < 0 table end")
---     --         _table_end = 1
---     --     end
---     -- end
--- end
-
-function check_table_end()
-    if not _has_start then return end
---    if _game_start <= 0 then return end
-    if _table_end == 1 then
-        return
-    end
-    if _game_status ~= MJ_STATUS.GAME_END and _game_status ~= MJ_STATUS.WAITING_START 
-        and _game_status ~= MJ_STATUS.GAME_REST_WAITING and _game_status ~= MJ_STATUS.GAME_REST then
-        return
-    end
-
-end
 
 local function excute_gold()
-    local gold_changed = {win={},lose={}}
-    for _, v in pairs(_current_scores) do
-        local p = assert(_players_sit[v.seatid])   
-        local score = v.end_score + v.genzhuang_score + v.lianzhuang_score
-        if score > 0 then
-            gold_changed.win[p.uid] = p.gold >= score and score or p.gold
-        else
-            gold_changed.lose[p.uid] = math.abs(score) >= p.gold and p.gold or math.abs(score)
-        end
+    -- local gold_changed = {win={},lose={}}
+    -- for _, v in pairs(_current_scores) do
+    --     local p = assert(_players_sit[v.seatid])   
+    --     local score = v.end_score + v.genzhuang_score + v.lianzhuang_score
+    --     if score > 0 then
+    --         gold_changed.win[p.uid] = p.gold >= score and score or p.gold
+    --     else
+    --         gold_changed.lose[p.uid] = math.abs(score) >= p.gold and p.gold or math.abs(score)
+    --     end
+    -- end
+    -- deal_gold(gold_changed)
+    for k,v in pairs(_players_sit) do
+        local change = v.end_score + v.gang_score
+        
     end
-    deal_gold(gold_changed)
 end
 
 local function game_end()
-    show_lose_cards()
-
     _last_horse_tiles = nil
     LOG_DEBUG("game end win_type %s",tostring(_win_type))
     if _win_type == WIN_TYPE.OWN or _win_type == WIN_TYPE.OTHER 
@@ -2335,35 +2323,19 @@ local function game_end()
     --    _last_horse_tiles = get_bonus_tiles()
         --set_horse_scores()--抓马算法
         set_end_scores()
-        set_lianzhuang_score()
     end
-
-    update_player_score()
---    _hands_cnt = _hands_cnt + 1
---    check_game_settle()
-    check_table_end()
-    -- for k,v in pairs(_players_sit) do
-    --     v.status = 3
-    -- end
 
     if _isUseGold then
         excute_gold()
     end
     --录像用
     local end_rst = {players = {}, score = {}}
-    local tmp_score = {}
     local resinfo = {}
-    local endScore = 0
+
     for i,v in ipairs(_current_scores) do
         local player = _players_sit[i]
-        if _isUseGold then
-            endScore = player.gold_change
-        else
-            endScore = v.end_score
-        end
         local info = {}
-        
-        info.seatid = v.seatid
+        info.seatid = player.seatid
         info.handcards = player.tiles
         info.opts = {}
         for k,cc in ipairs(player.hold_tiles or {}) do
@@ -2374,34 +2346,27 @@ local function game_end()
         info.nickname = player.nickname
         info.uid = player.uid
         info.headimg = player.headimg
-        info.winscore = endScore
-        info.gangscore = v.gang_score
+        info.winscore = player.end_score + player.gang_score
+        info.gangscore = player.gang_score
         info.gold = player.gold
-        -- tmp_score[i] = {
-        --     seatid = v.seatid,
-        --     endScore = endScore,
-        --     gangScore = v.gang_score,
-        --     genzhuangScore = v.genzhuang_score,
-        --     lianzhuangScore = v.lianzhuang_score or 0,
-        -- }
-        osapi.tinsert(end_rst.players, _players_sit[v.seatid].nickname)
-        local score = v.end_score + v.genzhuang_score + v.gang_score
-        osapi.tinsert(end_rst.score, score)
+
+        -- osapi.tinsert(end_rst.players, _players_sit[v.seatid].nickname)
+        -- local score = v.end_score + v.genzhuang_score + v.gang_score
+        -- osapi.tinsert(end_rst.score, score)
         osapi.tinsert(resinfo,info)
     end
     local msg = {
         reslist = resinfo,
         winType = _win_type,
         wincard = _win_card,
-        loseSeatid = _lose_seatid,
+        loseSeatid = _win_type == WIN_TYPE.OTHER and _lose_seatid or 0,
         horseTile = _horse_tiles,
-        hitTiles = _last_hit_tiles or {}
+        hitTiles = _last_hit_tiles or {},
+        bankerSeatid = _banker_seatid
     }
-    luadump(msg,"resMJResult=",7)
     -- PRINT_T(msg)
     _tapi.send_to_all("game.resMJResult", msg)
     
-    _last_scores = _current_scores
     _current_scores = nil
     _has_robot = nil
 
@@ -2676,8 +2641,6 @@ local function deal_game_stop()
         local info = {
             uid = p.uid,
             nickname = p.nickname,
-            winown = p.winall_cnt or 0,
-            winother = p.win_cnt or 0,
             minggang = p.ming_gang + p.peng_gang,
             angang = p.an_gang,
             score = p.score or 0
@@ -2907,7 +2870,6 @@ function client.reqMJPlayerOpt( p, msg )
             clear_claim_players()
             player_chi(p, cards)
             _qishouhu = false
-            _genzhuangtile = false
         elseif opttype == OPT_TYPE.PENG then
             if p.noPeng == cards[1] then --弃碰过圈规则
                 p:send_msg("game.resMJPlayerOpt", { result = 2 })
@@ -2916,11 +2878,9 @@ function client.reqMJPlayerOpt( p, msg )
             clear_claim_players()
             player_peng(p, cards[1])
             _qishouhu = false
-            _genzhuangtile = false
         elseif opttype == OPT_TYPE.LIGHT_GANG then
             clear_claim_players()
             _qishouhu = false
-            _genzhuangtile = false
             if check_qiangminggang(p, cards[1]) then
                 _qiangminggang_info = {player = p, tile = cards[1]}
                 change_game_status(MJ_STATUS.WAITING_CLAIM)
@@ -2940,6 +2900,7 @@ function client.reqMJPlayerOpt( p, msg )
         elseif opttype == OPT_TYPE.BLACK_GANG then
         --    PRINT_T(cards)
             player_an_gang(p, cards[1])
+            _qishouhu = false
         elseif opttype == OPT_TYPE.PENG_GANG then
             player_peng_gang(p, cards[1])
         elseif opttype == OPT_TYPE.WIN then --自摸
@@ -2991,8 +2952,8 @@ function client.MJGMSetNextCard(p, msg)
     _gm_next_card[p.uid] = msg.card
 end
 
+--这个功能没有使用，用于客户端发牌动画完成后发消息给服务器，服务器再进行发牌20190208
 function client.MJRequestDealTiles(p, msg)
-    LOG_DEBUG("player[%d] MJRequestDealTiles", p.uid)
     if not osapi.tindexof(_request_deal, p.uid) then
         osapi.tinsert(_request_deal, p.uid)
     end
@@ -3143,6 +3104,7 @@ function mj_logic.resume(p, is_resume)
         --     info.opts[k] = {opttype = v.opttype,cards = v.cards}
         -- end
         info.seatid = seatid
+        info.cpnum = get_max_num(player.chipengRecord)
         osapi.tinsert(tiles, info)
     end
     --在询问玩家吃碰杠阶段时 出牌人的seatId,和一些操作和卡牌信息
@@ -3378,6 +3340,34 @@ function mj_logic.init( ps, api, m_conf, m_times, m_score, m_pay,
     _owner = uid
     check_status_functions()
 --    init_origin_wall()
+--测试---------------------------------------------------------
+    -- local tt = {
+    --     {11,14,17,22,25,28,33,36,39,41, 43, 45, 47, 51, 53, 55},
+    --     {11,14,17,32,35,38,23,26,29,41, 43, 45, 47, 51, 53, 55},
+    --     {21,24,27,32,35,38,13,16,19,41, 43, 45, 47, 51, 53, 55},
+    --     {21,24,27,12,15,18,33,36,39,41, 43, 45, 47, 51, 53, 55},
+    --     {31,34,37,12,15,18,23,26,29,41, 43, 45, 47, 51, 53, 55},
+    --     {31,34,37,22,25,28,13,16,19,41, 43, 45, 47, 51, 53, 55},
+    -- }
+
+    -- for i=1,1000 do
+    -- local idx = math.random( 1,#tt )
+    -- local ttlist = table.arraycopy(tt[idx])
+    -- local hu = {}
+    -- for i=1,3 do
+    --     idx = math.random( 1,#ttlist )
+    --     hu[#hu+1] = table.remove( ttlist,idx )
+    -- end
+
+    -- for k,v in pairs(hu) do
+    --     if mj_deal.check_win_one(ttlist, v) then
+    --         -- LOG_DEBUG("可以和")
+    --     else
+    --         LOG_DEBUG("不可以和")
+    --     end
+    -- end
+    -- end
+
 end
 
 return mj_logic

@@ -27,6 +27,7 @@ local match_manager = {}
 local bank_fd
 local bank_session = 0
 local bank_proto = {}
+local _redisWatch
 
 local function get_bank_session()
 	bank_session = bank_session + 1
@@ -389,12 +390,6 @@ function CMD.transfer_bank(uid, value, fromuid)
 	return false
 end
 
-function CMD.check_user(uid)
-	local userdata = get_offline_userdata(uid)
-	if userdata then return true end
-	return false
-end
-
 function CMD.get_user_json(uid)
 	local userdata = get_offline_userdata(uid)
 	if userdata then
@@ -534,6 +529,21 @@ function CMD.query_online_user(gmnode, gmaddr)
 	end
 end
 
+--[[
+    @desc: 像队列里面插入消息
+    author:{author}
+    time:2019-02-20 23:29:24
+    --@type:消息号
+	--@data:消息内容
+    @return:
+]]
+function CMD.insertMsg(type,data)
+	local ok = pcall(skynet.send,_redisWatch,"lua","pushMsg",type,data)
+	if ok then
+		LOG_DEBUG("插入队列失败"..type..","..data)
+	end
+end
+
 skynet.start(function()
 	skynet.dispatch("lua", function(_,_, command, ...)
 		local f = CMD[command]
@@ -580,8 +590,10 @@ skynet.start(function()
 		end
 	end
 
-	if centerbank then
-		skynet.fork(connect_to_bank)
+	_redisWatch = skynet.uniqueservice("rediswatch")
+	local ok = pcall(skynet.send,_redisWatch,"lua","initdbNode",nodename,skynet.self())
+	if not ok then
+		LOG_DEBUG("注册函数失败")
 	end
 
 	sharedata.new("shop_conf", require("shop_conf"))

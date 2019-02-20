@@ -58,6 +58,17 @@ local CMD = {
 	["hall.resQuickJoinGame"] = 20015, --加入房间返回
 	["20015"] = "hall.resQuickJoinGame",
 
+	--服务器和管理端通讯
+	--40001-49999为服务器(server)发给后台，50001-59999为后台(admin)发给服务器
+	["user.severGoldChange"] = 40001, --用户账户变化
+	["40001"] = "user.severGoldChange",
+	["user.adminGoldChange"] = 50001, --用户账户变化
+	["50001"] = "user.adminGoldChange",
+	["robot.severGetNewRobot"] = 40003, --服务器请求新机器人
+	["40003"] = "robot.severGetNewRobot",
+	["robot.adminGiveNewRobot"] = 50003, --服务器请求新机器人反馈
+	["50003"] = "robot.adminGiveNewRobot",
+
 	--游戏共有
 	["game.resTableInfo"] = 70001, --/发送桌子信息
 	["70001"] = "game.resTableInfo",

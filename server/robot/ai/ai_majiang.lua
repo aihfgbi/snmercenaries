@@ -156,8 +156,6 @@ local function discard()
 	if not discard_tile then
 		discard_tile = get_discard_tile()
 	end
-
-	table.removebyvalue(robot_info.tiles, discard_tile)
 	
 	send_to_server("reqMJPlayerOpt", {opts = {opttype=OPT_TYPE.DISCARD, cards={discard_tile}}})
 --	LOG_WARNING("robot[%d] discard[%s] over", robot_info.uid, tostring(discard_tile))
@@ -217,21 +215,27 @@ local function check_peng_gang(tile)
 	end
 end
 
---碰 杠
+--碰 杠 吃
 local function move_to_hold(opt, num, tile)
-	for i=1,num do
-		table.removebyvalue(robot_info.tiles, tile)
+	if opt == "chi" and type(tile) == "table" then
+		for k,v in pairs(tile) do
+			table.removebyvalue(robot_info.tiles, v)
+		end
+	else
+		for i=1,num do
+			table.removebyvalue(robot_info.tiles, tile)
+		end
 	end
 	if opt == "peng" then
 		robot_info.hold.peng = robot_info.hold.peng or {}
 		table.insert(robot_info.hold.peng, tile)
 	elseif opt == "peng_gang" then
 		table.removebyvalue(robot_info.hold.peng, tile)
-		robot_info.hold.gang = robot_info.hold.gang or {}
-		table.insert(robot_info.hold.gang, tile)
-	elseif opt == "gang" then
-		robot_info.hold.gang = robot_info.hold.gang or {}
-		table.insert(robot_info.hold.gang, tile)
+	-- 	robot_info.hold.gang = robot_info.hold.gang or {}
+	-- 	table.insert(robot_info.hold.gang, tile)
+	-- elseif opt == "gang" then
+	-- 	robot_info.hold.gang = robot_info.hold.gang or {}
+	-- 	table.insert(robot_info.hold.gang, tile)
 	end
 end
 
@@ -278,34 +282,28 @@ function server_msg.resMJPlayerOpt(msg)
 		delay_call(math.random(0,1), pass)
 		return
 	end
+	local type = msg.opts.opttype
 	--有人出牌
-	if msg.cards and #msg.cards == 1 and msg.opttype == OPT_TYPE.DISCARD then
-		if fromSeatid == banker_seatid then
-			gen_zhuang_tile = msg.cards[1]
-		elseif gen_zhuang_tile and msg.cards[1] ~= gen_zhuang_tile then
-			gen_zhuang_tile = nil
+	if type == OPT_TYPE.DISCARD then
+		--收到成功以后才删除牌
+		if msg.fromSeatid == robot_info.seatid then
+			table.removebyvalue(robot_info.tiles, msg.optcard)
+			LOG_DEBUG("出牌成功之后[%s]", table.concat(robot_info.tiles, ","))
 		end
 
-		table_tiles[msg.cards[1]] = (table_tiles[msg.cards[1]] or 0) + 1
-		local tile_num = 0
-		for tile,num in pairs(table_tiles) do
-			tile_num = tile_num + num
-		end
-	--	LOG_WARNING("cur_discard[%d] table_tiles num[%d]", msg.cards[1], tile_num)
-	end
+		table_tiles[msg.optcard] = (table_tiles[msg.optcard] or 0) + 1
 	--有人吃碰杠的消息
-	if msg.areaid == TILE_AREA.HOLD then
-		gen_zhuang_tile = nil
-		if msg.toSeatid == robot_info.seatid then
-			if msg.opttype == OPT_TYPE.PENG then
-				move_to_hold("peng", 2, msg.cards[1])
-			elseif msg.opttype == OPT_TYPE.PENG_GANG then
-				move_to_hold("peng_gang", 1, msg.cards[1])
-			elseif msg.opttype == OPT_TYPE.BLACK_GANG then
-				move_to_hold("gang", 4, msg.cards[1])
-			elseif msg.opttype == OPT_TYPE.LIGHT_GANG then
-				move_to_hold("gang", 3, msg.cards[1])
-			end
+	elseif msg.toSeatid == robot_info.seatid then
+		if type == OPT_TYPE.PENG then
+			move_to_hold("peng", 2, msg.optcard)
+		elseif type == OPT_TYPE.PENG_GANG then
+			move_to_hold("peng_gang", 1, msg.optcard)
+		elseif type == OPT_TYPE.BLACK_GANG then
+			move_to_hold("gang", 4, msg.optcard)
+		elseif type == OPT_TYPE.LIGHT_GANG then
+			move_to_hold("gang", 3, msg.optcard)
+		elseif type == OPT_TYPE.CHI then
+			move_to_hold("chi", 3, msg.opts.cards)
 		end
 	end
 end
@@ -315,7 +313,7 @@ function server_msg.resMJDrawCard(msg)
 		return
 	end
 	last_tile = msg.card
-
+	luadump(msg,"机器人收到了摸牌信息",7)
 	--第一轮需要额外延迟几秒
 	local extra_time = 0
 	if not next(table_tiles) then
@@ -327,10 +325,13 @@ function server_msg.resMJDrawCard(msg)
 		table.insert(robot_info.tiles, last_tile)
 		local an_gang_tile = check_an_gang()
 		if an_gang_tile then
+			LOG_DEBUG("机器人暗杠")
 			delay_call(math.random(1+extra_time,2+extra_time), player_opt_req, {opttype=OPT_TYPE.BLACK_GANG, cards={an_gang_tile}})
 		elseif check_peng_gang(last_tile) then
+			LOG_DEBUG("机器人碰杠")
 			delay_call(math.random(1+extra_time,2+extra_time), player_opt_req, {opttype=OPT_TYPE.PENG_GANG, cards={last_tile}})
 		else
+			LOG_DEBUG("机器人打牌")
 			delay_call(math.random(2+extra_time,3+extra_time), discard)
 		end
 	end
@@ -360,6 +361,8 @@ end
 
 function server_msg.resMJNotifyPlayerOpt(msg)
 	if msg.seatid == robot_info.seatid then
+		LOG_DEBUG("机器人收到了操作提示,"..msg.seatid..":::"..robot_info.seatid)
+		luadump(msg,"机器人---",7)
 		if msg.opts then
 			if msg.opts[1].opttype == OPT_TYPE.DRAW or msg.opts[1].opttype == OPT_TYPE.DRAW_REVERSE and msg.opts[1].cards then
 				
@@ -375,12 +378,41 @@ function server_msg.resMJNotifyPlayerOpt(msg)
 				elseif table.indexof(opts, OPT_TYPE.LIGHT_GANG) then
 					-- LOG_WARNING("robot[%d] ming gang", robot_info.uid)
 					delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.LIGHT_GANG, cards={msg.opts[1].cards[1]}})
-				--	move_to_hold("light_gang", 3, msg.opts[1].cards[1])
 				elseif table.indexof(opts, OPT_TYPE.PENG) then
 					delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.PENG, cards={msg.opts[1].cards[1]}})
-				--	move_to_hold("peng", 2, msg.opts[1].cards[1])
 				elseif table.indexof(opts, OPT_TYPE.CHI) then
-					delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.CHI, cards={msg.opts[1].cards[1]}})
+					--因为数据结构的问题需要做特殊处理
+					-- "opts" = {
+					-- 	      1 = {
+					-- 	          "cards" = {
+					-- 	              1 = 32
+					-- 	              2 = 33
+					-- 	              3 = 34
+					-- 	              4 = 33
+					-- 	              5 = 35
+					-- 	              6 = 34
+					-- 	          }
+					-- 	          "opttype" = 3
+					-- 	      }
+					-- 	  }
+					--检测臭吃规则,第三张牌是吃的那张牌
+					local optcard = msg.opts[1].cards[3]
+					if has_tile(robot_info.tiles,optcard) then
+						delay_call(math.random(2,3), pass)
+					else
+						--随机取一组
+						local len = #(msg.opts[1].cards) / 3
+						local tmp = 0
+						LOG_DEBUG("机器人吃牌，共有几组=="..len)
+						if len > 1 then
+							tmp = RAND_NUM(0,len-1)
+						end
+						local ocards = {}
+						for i=1+(3*tmp),1+(3*tmp)+2 do
+							ocards[#ocards+1] = msg.opts[1].cards[i]
+						end
+						delay_call(math.random(2,3), player_opt_req, {opttype=OPT_TYPE.CHI, cards=ocards})
+					end
 				else
 					delay_call(math.random(2,3), pass)
 				end

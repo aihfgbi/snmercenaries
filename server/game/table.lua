@@ -514,6 +514,7 @@ end
     @return:
 ]]
 function api.send_to_all(name, msg)
+    luadump(msg,"向所有人发送了消息【"..name.."】",7)
     for uid, p in pairs(players) do
         p:send_msg(name, msg)
     end

@@ -209,6 +209,7 @@ message resMJResult {
     required int32 loseSeatid = 4;        //点炮的座位号
     repeated int32 horseTile = 5;          //马牌
     repeated int32 hitTiles = 6;    //中马牌
+    required int32 bankerSeatid = 7;        //庄家座位号
 }
 
 //RES_RESUME_MJ = 71005;//麻将重连信息
@@ -220,6 +221,7 @@ message resMJResume {
         repeated Opt opts = 4; //吃碰杠的牌
         repeated int32 desk = 5;    //已经出的牌
         required int32 seatid = 6; //座位号
+        optional int32 cpnum = 7;//吃碰了同一家几次，只会发次数最多的
     }
     required int32 status = 1;  //当前状态
     optional int32 time = 2;    //当前状态剩余时间

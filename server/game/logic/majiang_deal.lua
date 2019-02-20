@@ -352,7 +352,7 @@ end
 
 --是不是七对
 local function check_qidui(tiles, shifter_cnt)
-	if not _M.hu_qidui then return false end
+	if not _M.fan_qidui then return false end
 	assert(_M.fan_qidui)
 	local single_cnt = 0
 	for k,v in pairs(tiles) do
@@ -361,19 +361,61 @@ local function check_qidui(tiles, shifter_cnt)
 	return single_cnt <= shifter_cnt
 end
 
---十三幺
+--[[
+    @desc: 十三幺，新浦麻将为全不靠
+    author:{author}
+    time:2019-02-16 12:39:31
+    --@tiles:
+	--@shifter_cnt: 
+    @return:
+]]
 local function check_shisanyao(tiles, shifter_cnt)
-	if not _M.hu_shisanyao then return false end
+	if not _M.fan_shisanyao then return false end
 	assert(_M.fan_shisanyao)
-
-	if shifter_cnt + table.len(tiles) >= 13 then
-		for card,_ in pairs(tiles) do
-			if not table.indexof(SHI_SAN_YAO, card) then
-				return false
+	if table.len(tiles) ~= 14 then
+		return false
+	end
+-- LOG_DEBUG("check_shisanyao")
+	local tongHua = {}
+	for card,_ in pairs(tiles) do
+		if card < 40 then --把风牌去掉
+			local hua = math.floor( card/10 )
+			tongHua[hua] = tongHua[hua] or {}
+			table.insert( tongHua[hua], card%10 )
+		end
+	end
+	local tmplist = {0,1,2}
+	if #tongHua == 3 then -- 因为风牌只有7张，3中花色必定都有
+		for k,cards in pairs(tongHua) do
+			if #cards > 1 then
+				local modvalue = -1
+				for k,card in pairs(cards) do
+					if modvalue == -1 then
+						modvalue = card%3
+					end
+					if card%3 ~= modvalue then
+						return false
+					end
+					table.removebyvalue(tmplist,modvalue)
+				end
+			else
+				local tmp = (cards[1])%3
+				table.removebyvalue(tmplist,tmp)
 			end
 		end
-		return true
 	end
+	if #tmplist ~= 0 then
+		return false
+	end
+	return true
+	-- if shifter_cnt + table.len(tiles) >= 13 then
+	-- 	for card,_ in pairs(tiles) do
+	-- 		if not table.indexof(SHI_SAN_YAO, card) then
+	-- 			return false
+	-- 		end
+	-- 	end
+	-- 	return true
+	-- end
 end
 
 --清一色
@@ -647,9 +689,9 @@ function _M.check_win_all(tiles, tile, hold_tiles)
 
 	if tile then table.insert(copy, tile) end
 	LOG_DEBUG("自摸检测")
-	luadump(tiles,"手牌")
+	LOG_DEBUG("手牌:"..table.concat(tiles, ","))
 	luadump(tile,"摸的牌")
-	luadump(hold_tiles,"手里的牌")
+
 	return check_win(copy)
 end
 
@@ -660,10 +702,10 @@ function _M.check_win_one(tiles, tile, hold_tiles)
 	local copy = copy_table(tiles)
 
 	table.insert(copy, tile)
-	-- LOG_DEBUG("点炮检测")
-	-- luadump(tiles,"手牌")
-	-- luadump(tile,"出的牌")
-	-- luadump(hold_tiles,"手里的牌")
+	LOG_DEBUG("点炮检测")
+	LOG_DEBUG("手牌:"..table.concat(tiles, ","))
+	luadump(tile,"出的牌")
+
 	return check_win(copy)
 end
 
@@ -785,8 +827,8 @@ end
 
 function _M.set_rule_data(spec_cfg, rate_cfg)
 --	shifter1 = (spec_cfg.shifter and spec_cfg.shifter > 0) and spec_cfg.shifter
-	_M.hu_qidui = spec_cfg.qidui and spec_cfg.qidui ~= 0
-	_M.hu_shisanyao = spec_cfg.shisanyao and spec_cfg.shisanyao ~= 0
+	-- _M.hu_qidui = spec_cfg.qidui and spec_cfg.qidui ~= 0
+	-- _M.hu_shisanyao = spec_cfg.shisanyao and spec_cfg.shisanyao ~= 0
 
 	_M.fan_qingyise = (rate_cfg.qingyise and rate_cfg.qingyise > 0) and rate_cfg.qingyise
 	_M.fan_qidui 	= (rate_cfg.qidui and rate_cfg.qidui > 0) and rate_cfg.qidui
@@ -801,7 +843,7 @@ function _M.set_rule_data(spec_cfg, rate_cfg)
 	_M.fan_ziyise 		= (rate_cfg.ziyise and rate_cfg.ziyise > 0) and rate_cfg.ziyise
 	_M.fan_shibaluohan 	= (rate_cfg.shibaluohan and rate_cfg.shibaluohan > 0) and rate_cfg.shibaluohan
 	_M.fan_wuguijiabei = (rate_cfg.wuguijiabei and rate_cfg.wuguijiabei > 0) and rate_cfg.wuguijiabei or nil
-	luadump(_M,"初始化倍率=")
+	-- luadump(_M,"初始化倍率=")
 end
 
 function _M.init()
