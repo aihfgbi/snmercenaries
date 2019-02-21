@@ -17,7 +17,7 @@ local lock  --鎖定不能操作數組
 local _checkTime
 local _msgcmd = require("cmd")
 local _dbnode, _dbaddr
-local _robnode,_robaddr
+local _robnode, _robaddr
 local redis_pwd = skynet.getenv("redis_pwd")
 if redis_pwd == "" then
     redis_pwd = nil
@@ -31,11 +31,11 @@ local conf = {
 
 function doMsgFunc(data)
     data = json.decode(data)
-    luadump(data, "admin msg===")
     local cmd = math.floor(tonumber(data.type))
+    data.type = cmd
     for k, v in pairs(data.data) do
         if type(v) == "number" then
-            v = math.floor(v)
+            data.data[k] = math.floor(v)
         end
     end
     if cmd > 40000 and cmd < 60000 then
@@ -48,11 +48,12 @@ function doMsgFunc(data)
         module = module or ""
         method = method or ""
         -- LOG_DEBUG("msgname:"..msgname..",module="..module..",method="..method)
+        -- LOG_DEBUG(_robnode..",".._robaddr)
         if module == "robot" then
-            -- local ok = pcall(cluster.call, _robnode, _robaddr, "client_req", 1017, method, data)
-            -- if ok then
-            --     LOG_DEBUG("調用成功")
-            -- end
+            local ok = pcall(cluster.call, _robnode, _robaddr, method, data)
+            if ok then
+                LOG_DEBUG("調用成功")
+            end
         else
             LOG_DEBUG("錯誤的消息號" .. cmd)
         end
@@ -96,9 +97,9 @@ function readMsg()
                 local ok, a = pcall(skynet.send, _logredis, "lua", "execute", "LPUSH", redisPushList, mm)
                 if ok then
                     local k, b = pcall(skynet.call, _logredis, "lua", "publishMsg", redisPushMsg, "123asdgadaeadsgads")
-                    -- if k then
-                    --     LOG_DEBUG("发送订阅消息成功===" .. b)
-                    -- end
+                -- if k then
+                --     LOG_DEBUG("发送订阅消息成功===" .. b)
+                -- end
                 end
             end
         end
@@ -175,6 +176,8 @@ end
 function CMD.initrobNode(node, addr)
     _robnode = node
     _robaddr = addr
+    LOG_DEBUG("注册机器人人成功"..node)
+    LOG_DEBUG("addr="..addr)
 end
 
 skynet.start(

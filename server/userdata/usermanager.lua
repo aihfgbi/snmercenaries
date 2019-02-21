@@ -539,7 +539,7 @@ end
 ]]
 function CMD.insertMsg(type,data)
 	local ok = pcall(skynet.send,_redisWatch,"lua","pushMsg",type,data)
-	if ok then
+	if not ok then
 		LOG_DEBUG("插入队列失败"..type..","..data)
 	end
 end
@@ -590,7 +590,8 @@ skynet.start(function()
 		end
 	end
 
-	_redisWatch = skynet.uniqueservice("rediswatch")
+	_redisWatch = skynet.newservice("rediswatch")
+	LOG_DEBUG("=-=-="..skynet.address(_redisWatch))
 	local ok = pcall(skynet.send,_redisWatch,"lua","initdbNode",nodename,skynet.self())
 	if not ok then
 		LOG_DEBUG("注册函数失败")

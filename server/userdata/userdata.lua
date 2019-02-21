@@ -126,7 +126,7 @@ local function load_userdata()
 				luadump(userinfo,"取得的用户信息")
 				_userdata = userinfo
 				_userdata.id = math.floor(userinfo.id)
-				_userdata.userType = math.floor(userinfo.userType)
+				-- _userdata.userType = math.floor(userinfo.userType)
 				_userdata.sex = math.floor(userinfo.sex)
 				-- 获取用户金币和银行信息
 				ok, data = pcall(skynet.call, _redis, "lua", "execute", "hget", "USER-ACCOUNT_INFO", _uid .. "#1001")

@@ -88,7 +88,7 @@ function CMD.get_robot(type, gold, gameid, gamenode, gamerobot)
         if ok then
             luadump(userinfo, "取得的用户信息")
             robot_list[uid].sex = math.floor(userinfo.sex)
-            robot_list[uid].nickName = userinfo.nickName
+            robot_list[uid].nickname = userinfo.nickName
             robot_list[uid].headimg = userinfo.headImg
             -- 获取用户金币和银行信息
             ok, data = pcall(skynet.call, _redis, "lua", "execute", "hget", "USER-ACCOUNT_INFO", uid .. "#1001")
@@ -152,11 +152,16 @@ end
 ]]
 function CMD.free_robot(uid)
     if uid and robot_list[uid] then
-        CMD.saveGoldChange(uid)
-        table.insert(freeIdList, 1, uid)
+        CMD.saveGoldChange(uid) --保存金币变化
+        table.insert(freeIdList, 1, uid) --把释放的ID放回到空闲列表
         count = count - 1
         robot_list[uid] = nil
     end
+end
+
+function CMD.adminGiveNewRobot(data)
+    luadump(data,"收到了反馈信息")
+    skynet.fork(getFreeIdList)
 end
 
 skynet.start(
@@ -171,14 +176,14 @@ skynet.start(
 
 		_redis = skynet.uniqueservice("redispool")
 		skynet.call(_redis, "lua", "start")
-        _redisWatch = skynet.uniqueservice("rediswatch")
+        _redisWatch = skynet.newservice("rediswatch")
+        LOG_DEBUG("=-=-="..skynet.address(_redisWatch))
         local ok = pcall(skynet.send, _redisWatch, "lua", "initrobNode", nodename, skynet.self())
         if not ok then
             LOG_DEBUG("注册函数失败")
         end
 
 		skynet.fork(checkFreeRobot, true)
-		skynet.fork(getFreeIdList)
 
         collectgarbage("collect")
         collectgarbage("collect")

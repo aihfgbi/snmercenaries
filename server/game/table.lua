@@ -269,7 +269,7 @@ function CMD.join(p)
             {
                 info = {
                     uid = p.uid,
-                    nickname = p.nickName,
+                    nickname = p.nickname,
                     sex = p.sex or 1,
                     seatid = p.seatid or 0,
                     ready = p.ready or 0,
